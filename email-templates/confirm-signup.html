@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Confirmá tu cuenta - Loopy Rastreo</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f4faf9; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4faf9; padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px; background-color:#ffffff; border-radius:20px; overflow:hidden; box-shadow:0 8px 28px rgba(34,229,176,0.18); border:1px solid #d5e6e4;">
+
+          <!-- Header con degrade verde -->
+          <tr>
+            <td align="center" style="background:linear-gradient(135deg,#22e5b0,#37635e); padding:36px 24px 28px 24px;">
+              <img src="https://loopy.company/icon.svg" width="56" height="56" alt="Loopy Rastreo" style="display:block; margin:0 auto 12px auto; border-radius:14px;" />
+              <span style="display:inline-block; font-size:20px; font-weight:800; color:#ffffff; letter-spacing:0.3px;">Loopy Rastreo</span>
+            </td>
+          </tr>
+
+          <!-- Cuerpo -->
+          <tr>
+            <td style="padding:36px 32px 8px 32px;">
+              <span style="display:inline-block; padding:4px 14px; border-radius:999px; background-color:rgba(34,229,176,0.1); color:#37635e; font-size:11px; font-weight:700; letter-spacing:0.6px; text-transform:uppercase; margin-bottom:16px;">
+                Confirmá tu cuenta
+              </span>
+              <h1 style="margin:16px 0 8px 0; font-size:22px; line-height:1.3; color:#1b3230; font-weight:800;">
+                ¡Gracias por sumarte a Loopy! 🎉
+              </h1>
+              <p style="margin:0 0 24px 0; font-size:15px; line-height:1.6; color:#37635e;">
+                Ya casi estás listo para empezar a rastrear en tiempo real con las personas que más te importan. Solo falta confirmar tu email para activar tu cuenta.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Boton -->
+          <tr>
+            <td align="center" style="padding:0 32px 32px 32px;">
+              <a href="{{ .ConfirmationURL }}"
+                 style="display:inline-block; width:100%; max-width:320px; box-sizing:border-box; padding:14px 24px; background:linear-gradient(135deg,#22e5b0,#0fb890); color:#ffffff; font-size:16px; font-weight:700; text-decoration:none; border-radius:999px; box-shadow:0 10px 30px rgba(34,229,176,0.45); text-align:center;">
+                Confirmar mi cuenta
+              </a>
+              <p style="margin:16px 0 0 0; font-size:12px; color:#589d95;">
+                Si el botón no funciona, copiá y pegá este link en tu navegador:
+              </p>
+              <p style="margin:6px 0 0 0; font-size:12px; word-break:break-all;">
+                <a href="{{ .ConfirmationURL }}" style="color:#0fb890;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Adornos: features -->
+          <tr>
+            <td style="padding:0 32px 32px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ebf3f2; padding-top:24px;">
+                <tr>
+                  <td style="padding-top:24px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding-right:12px; vertical-align:top;">
+                          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:#22e5b0; margin-top:6px;"></span>
+                        </td>
+                        <td style="font-size:13px; color:#37635e; line-height:1.5; padding-bottom:14px;">
+                          <strong style="color:#1b3230;">Modo Espejo</strong> — compartí ubicación en tiempo real con amigos, pareja o compañeros de viaje.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding-right:12px; vertical-align:top;">
+                          <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:#22e5b0; margin-top:6px;"></span>
+                        </td>
+                        <td style="font-size:13px; color:#37635e; line-height:1.5;">
+                          <strong style="color:#1b3230;">Modo Supervisión</strong> — cuidá a quien más te importa con zonas seguras y alertas.
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="background-color:#f4faf9; padding:24px 32px; border-top:1px solid #ebf3f2;">
+              <p style="margin:0; font-size:12px; color:#589d95;">
+                Si no creaste esta cuenta, podés ignorar este email.
+              </p>
+              <p style="margin:8px 0 0 0; font-size:12px; color:#589d95; font-weight:600;">
+                Loopy Rastreo · LOOPER CASHLINE SL
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
