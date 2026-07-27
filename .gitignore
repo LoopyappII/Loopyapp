@@ -6,3 +6,5 @@ out
 next-env.d.ts
 .superpowers/
 .vercel
+.claude/
+tsconfig.tsbuildinfo
