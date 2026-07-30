@@ -12,12 +12,16 @@ import {
   LogOut as LogOutIcon,
   Siren,
   Gauge,
+  Route as RouteIcon,
+  X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { haversineMeters } from "@/lib/geo";
 import type { Loop, LoopMember, SafeZone, SpeedAlert } from "@/lib/types";
-import type { MapMember, MapZone } from "@/components/LiveMap";
+import type { MapMember, MapRoute, MapZone } from "@/components/LiveMap";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
+
+const ROUTE_COLOR = "#ec6fc9";
 
 const LiveMap = dynamic(() => import("@/components/LiveMap"), {
   ssr: false,
@@ -83,6 +87,10 @@ export default function LoopPage() {
   const [holdPct, setHoldPct] = useState(0);
   const [sosSent, setSosSent] = useState(false);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [routeUserId, setRouteUserId] = useState<string | null>(null);
+  const [routePoints, setRoutePoints] = useState<{ lat: number; lng: number }[]>([]);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   const insideZonesRef = useRef<Record<string, boolean>>({});
   const lastInsertRef = useRef<number>(0);
@@ -407,6 +415,29 @@ export default function LoopPage() {
     if (!error && data) setLoop(data);
   }
 
+  async function handleToggleRoute(uid: string) {
+    if (routeUserId === uid) {
+      setRouteUserId(null);
+      setRoutePoints([]);
+      return;
+    }
+    setRouteUserId(uid);
+    setRoutePoints([]);
+    setRouteLoading(true);
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const { data } = await supabase
+      .from("locations")
+      .select("lat, lng, recorded_at")
+      .eq("loop_id", loopId)
+      .eq("user_id", uid)
+      .gte("recorded_at", startOfDay.toISOString())
+      .order("recorded_at", { ascending: true })
+      .limit(1000);
+    setRoutePoints((data || []).map((r) => ({ lat: r.lat, lng: r.lng })));
+    setRouteLoading(false);
+  }
+
   function startHold() {
     if (sosSent) return;
     const start = Date.now();
@@ -465,8 +496,8 @@ export default function LoopPage() {
   const myAge = members.find((m) => m.user_id === userId)?.profiles?.age;
 
   type HistoryItem =
-    | { kind: "zone"; id: string; time: string; text: string; positive: boolean }
-    | { kind: "speed"; id: string; time: string; text: string };
+    | { kind: "zone"; id: string; time: string; text: string; positive: boolean; userId: string }
+    | { kind: "speed"; id: string; time: string; text: string; userId: string };
 
   const historyItems: HistoryItem[] = [
     ...events.map(
@@ -478,6 +509,7 @@ export default function LoopPage() {
           ev.safe_zones?.name || "zona"
         }`,
         positive: ev.event_type === "enter",
+        userId: ev.user_id,
       })
     ),
     ...speedAlerts.map(
@@ -486,11 +518,20 @@ export default function LoopPage() {
         id: sa.id,
         time: sa.created_at,
         text: `Alerta de velocidad — ${Math.round(sa.speed_kmh)} km/h (límite ${sa.limit_kmh} km/h)`,
+        userId: sa.user_id,
       })
     ),
   ]
+    .filter((it) => !routeUserId || it.userId === routeUserId)
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .slice(0, 20);
+
+  const routeMemberName = routeUserId
+    ? members.find((m) => m.user_id === routeUserId)?.profiles?.name || "Miembro"
+    : null;
+  const mapRoute: MapRoute | null = routeUserId
+    ? { color: ROUTE_COLOR, points: routePoints }
+    : null;
 
   return (
     <main className="relative min-h-screen flex flex-col">
@@ -561,8 +602,30 @@ export default function LoopPage() {
       </AnimatePresence>
 
       <div className="relative z-0 flex-1 grid md:grid-cols-3 gap-4 p-4">
-        <div className="md:col-span-2 h-[420px] md:h-auto rounded-xl overflow-hidden border border-loopy-100 shadow-card">
-          <LiveMap members={memberList} zones={mapZones} center={center} />
+        <div className="relative md:col-span-2 h-[420px] md:h-auto rounded-xl overflow-hidden border border-loopy-100 shadow-card">
+          <LiveMap members={memberList} zones={mapZones} center={center} route={mapRoute} />
+          {routeMemberName && (
+            <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-white/95 backdrop-blur-sm border border-loopy-100 shadow-card rounded-full pl-3 pr-1.5 py-1.5">
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: ROUTE_COLOR }}
+              />
+              <span className="text-xs font-medium text-loopy-900">
+                {routeLoading
+                  ? `Cargando recorrido de ${routeMemberName}...`
+                  : routePoints.length > 1
+                  ? `Recorrido de ${routeMemberName} · hoy`
+                  : `Sin movimiento registrado hoy para ${routeMemberName}`}
+              </span>
+              <button
+                onClick={() => handleToggleRoute(routeUserId as string)}
+                aria-label="Cerrar recorrido"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-loopy-700/60 hover:bg-loopy-50 hover:text-loopy-900"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
         </div>
 
         <motion.div
@@ -606,13 +669,27 @@ export default function LoopPage() {
             <h2 className="font-bold text-loopy-900 mb-2">Miembros</h2>
             <ul className="text-sm space-y-1">
               {members.map((m) => (
-                <li key={m.id} className="flex justify-between text-loopy-700">
-                  <span>
+                <li key={m.id} className="flex items-center justify-between gap-2 text-loopy-700">
+                  <span className="min-w-0 truncate">
                     {m.profiles?.name || "Miembro"}
                     {m.profiles?.age ? ` · ${m.profiles.age} años` : ""}
                   </span>
-                  <span className="text-xs text-bridge font-medium">
-                    {roleLabel(m.role)}
+                  <span className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-bridge font-medium">
+                      {roleLabel(m.role)}
+                    </span>
+                    <button
+                      onClick={() => handleToggleRoute(m.user_id)}
+                      aria-label={`Ver recorrido de ${m.profiles?.name || "miembro"}`}
+                      title="Ver recorrido de hoy en el mapa"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                        routeUserId === m.user_id
+                          ? "bg-glow-500 text-white"
+                          : "text-loopy-700/50 hover:bg-loopy-50 hover:text-bridge"
+                      }`}
+                    >
+                      <RouteIcon size={13} />
+                    </button>
                   </span>
                 </li>
               ))}
@@ -677,10 +754,32 @@ export default function LoopPage() {
           </motion.form>
 
           <motion.div variants={fadeInUp} className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
-            <h2 className="font-bold text-loopy-900 mb-2">Historial</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="font-bold text-loopy-900">
+                {routeMemberName ? `Historial de ${routeMemberName}` : "Historial"}
+              </h2>
+              {routeUserId && (
+                <button
+                  onClick={() => handleToggleRoute(routeUserId)}
+                  className="text-xs font-medium text-bridge hover:text-loopy-900"
+                >
+                  Ver todos
+                </button>
+              )}
+            </div>
+            {routeUserId && (
+              <p className="text-[11px] text-loopy-700/60 mb-2 flex items-center gap-1">
+                <RouteIcon size={11} className="text-glow-600 shrink-0" />
+                Recorrido de hoy marcado en el mapa
+              </p>
+            )}
             <ul className="text-xs space-y-1 max-h-40 overflow-y-auto">
               {historyItems.length === 0 && (
-                <li className="text-loopy-700/60">Sin eventos todavía.</li>
+                <li className="text-loopy-700/60">
+                  {routeMemberName
+                    ? `Sin eventos de ${routeMemberName} todavía.`
+                    : "Sin eventos todavía."}
+                </li>
               )}
               {historyItems.map((it) => (
                 <li key={it.id} className="flex items-center gap-1.5 text-loopy-700">

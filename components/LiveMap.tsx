@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { GoogleMap, Marker, Circle, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+import { useEffect, useRef, useState } from "react";
+import { GoogleMap, Marker, Circle, Polyline, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -40,20 +40,46 @@ export interface MapZone {
   radius_m: number;
 }
 
+export interface MapRoute {
+  color: string;
+  points: { lat: number; lng: number }[];
+}
+
+function startMarkerIcon(color: string): google.maps.Symbol {
+  return {
+    path: "M0,0 m -6,0 a 6,6 0 1,0 12,0 a 6,6 0 1,0 -12,0",
+    fillColor: "#ffffff",
+    fillOpacity: 1,
+    strokeColor: color,
+    strokeWeight: 3,
+    scale: 1,
+  };
+}
+
 export default function LiveMap({
   members,
   zones,
   center,
+  route,
 }: {
   members: MapMember[];
   zones: MapZone[];
   center: [number, number];
+  route?: MapRoute | null;
 }) {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "loopy-google-maps",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
   });
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !route || route.points.length < 2) return;
+    const bounds = new google.maps.LatLngBounds();
+    route.points.forEach((p) => bounds.extend(p));
+    mapRef.current.fitBounds(bounds, 60);
+  }, [route]);
 
   if (!GOOGLE_MAPS_API_KEY) {
     return (
@@ -86,6 +112,9 @@ export default function LiveMap({
       mapContainerStyle={containerStyle}
       center={{ lat: center[0], lng: center[1] }}
       zoom={14}
+      onLoad={(map) => {
+        mapRef.current = map;
+      }}
       options={{
         styles: MAP_STYLES,
         streetViewControl: false,
@@ -93,6 +122,23 @@ export default function LiveMap({
         fullscreenControl: false,
       }}
     >
+      {route && route.points.length > 1 && (
+        <Polyline
+          path={route.points}
+          options={{
+            strokeColor: route.color,
+            strokeOpacity: 0.85,
+            strokeWeight: 4,
+          }}
+        />
+      )}
+      {route && route.points.length > 0 && (
+        <Marker
+          position={route.points[0]}
+          icon={startMarkerIcon(route.color)}
+          title="Inicio del recorrido"
+        />
+      )}
       {members.map((m) => (
         <Marker
           key={m.userId}
