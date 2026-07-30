@@ -37,7 +37,7 @@ const FUNCTIONS = [
   {
     icon: MapPin,
     title: "Mapa en tiempo real",
-    body: "Vas a ver a cada persona de tu Loop en el mapa, en vivo. Cada una aparece con su foto o inicial, y con el nivel de batería de su teléfono — así sabés si se está por quedar sin señal antes de que pase.",
+    body: "Vas a ver a cada persona de tu Loop en el mapa, en vivo, con su ubicación actualizándose sola. Cada una aparece con su nombre y su color, para identificarla de un vistazo.",
     image: "/images/guia-de-uso/mapa.png",
     alt: "Pantalla de mapa de Loopy mostrando la ubicación en vivo de tres integrantes de la familia",
   },
@@ -58,7 +58,7 @@ const FUNCTIONS = [
   {
     icon: Siren,
     title: "Botón SOS",
-    body: "Ante una emergencia, mantenés presionado el botón SOS y avisás al instante a las personas que elegiste, compartiendo tu ubicación exacta. El sistema también puede marcar automáticamente el número de emergencia de tu zona.",
+    body: "Ante una emergencia, mantenés presionado el botón SOS y avisás al instante a todo tu Loop, compartiendo tu ubicación exacta. El resto ve la alerta en el momento y tiene a un toque el número de emergencia configurado.",
     image: "/images/guia-de-uso/sos.png",
     alt: "Pantalla del botón de emergencia SOS de Loopy",
   },
