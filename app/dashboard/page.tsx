@@ -70,7 +70,7 @@ export default function DashboardPage() {
       .single();
 
     if (error || !loop) {
-      setFormError(error?.message || "No se pudo crear el Loop");
+      setFormError(error?.message || "No se pudo crear el Loopy");
       setCreating(false);
       return;
     }
@@ -157,11 +157,11 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <h1 className="text-2xl font-bold text-loopy-900 mb-4">Tus Loops</h1>
+        <h1 className="text-2xl font-bold text-loopy-900 mb-4">Tus Loopys</h1>
 
         {loops.length === 0 ? (
           <p className="text-loopy-700 mb-8">
-            Todavía no formás parte de ningún Loop. Creá uno o unite con un
+            Todavía no formas parte de ningún Loopy. Crea uno o únete con un
             código de invitación.
           </p>
         ) : (
@@ -205,10 +205,10 @@ export default function DashboardPage() {
           >
             <h2 className="font-bold text-loopy-900 mb-4 flex items-center gap-2">
               <Plus size={18} className="text-bridge" />
-              Crear un Loop
+              Crear un Loopy
             </h2>
             <input
-              placeholder="Nombre del Loop"
+              placeholder="Nombre del Loopy"
               className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 focus:outline-none focus:ring-2 focus:ring-bridge/60"
               value={newLoopName}
               onChange={(e) => setNewLoopName(e.target.value)}
@@ -229,7 +229,7 @@ export default function DashboardPage() {
               disabled={creating}
               className="w-full py-2.5 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white font-semibold shadow-cta hover:shadow-cta-hover disabled:opacity-60"
             >
-              {creating ? "Creando..." : "Crear Loop"}
+              {creating ? "Creando..." : "Crear Loopy"}
             </motion.button>
           </form>
 
@@ -239,7 +239,7 @@ export default function DashboardPage() {
           >
             <h2 className="font-bold text-loopy-900 mb-4 flex items-center gap-2">
               <KeyRound size={18} className="text-bridge" />
-              Unirse a un Loop
+              Unirse a un Loopy
             </h2>
             <input
               placeholder="Código de invitación"
@@ -259,7 +259,7 @@ export default function DashboardPage() {
               <option value="supervisor">Voy a supervisar (Supervisor)</option>
             </select>
             <p className="text-xs text-loopy-700/70 mb-3">
-              El rol solo aplica si el Loop es de modo Supervisión.
+              El rol solo aplica si el Loopy es de modo Supervisión.
             </p>
             <motion.button
               whileHover={{ scale: 1.02 }}

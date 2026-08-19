@@ -15,52 +15,52 @@ const SUPPORT_EMAIL = "hola@loopy.company";
 const FAQS: FaqItem[] = [
   {
     q: "¿Qué es Loopy?",
-    a: "Loopy es una app para compartir tu ubicación en tiempo real de forma simple y segura, organizada en \"Loops\" (grupos).",
+    a: "Loopy es una app para compartir tu ubicación en tiempo real de forma simple y segura, organizada en \"Loopys\" (grupos).",
     keywords: ["que es loopy", "loopy", "aplicacion", "app"],
   },
   {
-    q: "¿Qué es un Loop?",
-    a: "Un Loop es un grupo donde sus miembros comparten ubicación entre sí, según el modo que elijan: Espejo o Supervisión.",
+    q: "¿Qué es un Loopy?",
+    a: "Un Loopy es un grupo donde sus miembros comparten ubicación entre sí, según el modo que elijan: Espejo o Supervisión.",
     keywords: ["que es un loop", "loop", "grupo"],
   },
   {
     q: "Diferencia entre Modo Espejo y Supervisión",
-    a: "En Modo Espejo todos los miembros del Loop se ven entre sí. En Modo Supervisión, un supervisor ve la ubicación de las personas que acompaña, pero no al revés.",
+    a: "En Modo Espejo eres el responsable del grupo: ves a todos sus miembros en directo, geolocalizados y sin errores, y ellos también te ven a ti. En Modo Supervisión, la persona responsable ve la ubicación de quienes acompaña, pero no al revés.",
     keywords: ["espejo", "supervision", "modo", "diferencia", "roles"],
   },
   {
-    q: "¿Cómo invito a alguien a mi Loop?",
-    a: "Compartile el código de invitación que aparece en tu Loop. Esa persona lo ingresa desde \"Unirse a un Loop\" en su panel.",
+    q: "¿Cómo invito a alguien a mi Loopy?",
+    a: "Compártele el código de invitación que aparece en tu Loopy. Esa persona lo ingresa desde \"Unirse a un Loopy\" en su panel.",
     keywords: ["invitar", "codigo", "invitacion", "unirse", "sumar", "agregar"],
   },
   {
     q: "¿Qué son las zonas seguras?",
-    a: "Son áreas que vos definís (como tu casa o el colegio). Loopy te avisa cuando un miembro entra o sale de esa zona.",
+    a: "Son áreas que tú defines (como tu casa o el colegio). Loopy te avisa cuando un miembro entra o sale de esa zona.",
     keywords: ["zona segura", "zona", "alerta", "entra", "sale"],
   },
   {
     q: "¿Cuánto cuesta Loopy?",
-    a: "Los primeros 2 días son gratis, sin tarjeta. Después la suscripción es de 14€ por mes y podés cancelarla cuando quieras.",
+    a: "Los primeros 2 días son gratis, sin tarjeta. Después la suscripción es de 14€ por mes y puedes cancelarla cuando quieras.",
     keywords: ["precio", "cuesta", "costo", "suscripcion", "pago", "plan", "gratis"],
   },
   {
     q: "¿Quién puede ver mi ubicación?",
-    a: "Solo los miembros de tu Loop, según el modo elegido. La base de datos aplica reglas de seguridad para que nadie fuera del Loop pueda verla.",
+    a: "Solo los miembros de tu Loopy, según el modo elegido. La base de datos aplica reglas de seguridad para que nadie fuera del Loopy pueda verla.",
     keywords: ["privacidad", "seguridad", "quien ve", "ubicacion", "datos"],
   },
   {
     q: "¿Funciona en iPhone y Android?",
-    a: "Sí. Loopy es una PWA: la abrís desde el navegador y podés instalarla en la pantalla de inicio en ambos sistemas.",
+    a: "Sí. Loopy es una PWA: la abres desde el navegador y puedes instalarla en la pantalla de inicio en ambos sistemas.",
     keywords: ["iphone", "android", "celular", "movil", "instalar", "pwa"],
   },
   {
     q: "¿Cómo cancelo mi cuenta?",
-    a: "Escribinos por este chat o a nuestro email y te ayudamos a cancelarla sin vueltas.",
+    a: "Escríbenos por este chat o a nuestro email y te ayudamos a cancelarla sin vueltas.",
     keywords: ["cancelar", "baja", "eliminar cuenta", "borrar cuenta"],
   },
   {
     q: "Olvidé mi contraseña",
-    a: "Por ahora escribinos con el email de tu cuenta y te ayudamos a restablecer tu contraseña manualmente.",
+    a: "Por ahora escríbenos con el email de tu cuenta y te ayudamos a restablecer tu contraseña manualmente.",
     keywords: ["contraseña", "password", "olvide", "recuperar", "clave"],
   },
 ];
@@ -102,7 +102,7 @@ export default function SupportChat() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       from: "bot",
-      text: "¡Hola! Soy el asistente de soporte de Loopy 👋 Elegí una pregunta de abajo o escribí la tuya.",
+      text: "¡Hola! Soy el asistente de soporte de Loopy 👋 Elige una pregunta de abajo o escribe la tuya.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -216,7 +216,7 @@ export default function SupportChat() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribí tu pregunta..."
+              placeholder="Escribe tu pregunta..."
               className="flex-1 px-3 py-2 rounded-full border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
             />
             <button
@@ -233,7 +233,7 @@ export default function SupportChat() {
             onClick={() => escalate("Tengo una consulta que no encontré en las preguntas frecuentes.")}
             className="text-[11px] text-loopy-700/70 hover:text-loopy-900 underline underline-offset-2 pb-2 shrink-0 self-center"
           >
-            ¿No encontrás tu respuesta? Escribinos por email
+            ¿No encuentras tu respuesta? Escríbenos por email
           </button>
           </motion.div>
         )}

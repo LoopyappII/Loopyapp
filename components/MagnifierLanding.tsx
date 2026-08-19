@@ -47,15 +47,15 @@ function LandingContent() {
               variants={fadeInUp}
               className="text-4xl md:text-5xl font-extrabold text-white max-w-xl leading-tight"
             >
-              Compartí tu{" "}
+              Comparte tu{" "}
               <span className="bg-gradient-to-r from-glow-400 via-bridge-400 to-loopy-500 bg-clip-text text-transparent">
                 ubicación
               </span>
               , a tu manera
             </motion.h1>
             <motion.p variants={fadeInUp} className="mt-5 text-lg text-white/80 max-w-md">
-              Creá un Loop y compartí ubicación entre pares, o supervisá a quien
-              más te importa. Vos elegís el modo.
+              Crea un Loopy y comparte ubicación entre pares, o supervisa a
+              quien más te importa. Tú eliges el modo.
             </motion.p>
             <motion.div variants={fadeInUp} className="mt-8">
               <MotionLink
