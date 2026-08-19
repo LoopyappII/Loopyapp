@@ -4,6 +4,7 @@ import "./globals.css";
 import RegisterSW from "@/components/RegisterSW";
 import SupportChat from "@/components/SupportChat";
 import BackgroundDecor from "@/components/BackgroundDecor";
+import CookieConsent from "@/components/CookieConsent";
 import { FAVICON_SRC } from "@/lib/favicon";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -39,6 +40,7 @@ export default function RootLayout({
         <RegisterSW />
         {children}
         <SupportChat />
+        <CookieConsent />
       </body>
     </html>
   );

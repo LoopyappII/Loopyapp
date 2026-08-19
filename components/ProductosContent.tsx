@@ -12,22 +12,22 @@ const USE_CASES = [
   {
     icon: Home,
     title: "Familia",
-    body: "Sabé que tus hijos llegaron bien al colegio o volvieron a casa, sin tener que preguntar. Zonas seguras, historial del día y un botón SOS a mano para cualquier imprevisto.",
+    body: "Sabe que tus hijos llegaron bien al colegio o volvieron a casa, sin tener que preguntar. Zonas seguras, historial del día y un botón SOS a mano para cualquier imprevisto.",
   },
   {
     icon: Heart,
-    title: "Pareja",
-    body: "Compartan la ubicación en Modo Espejo: los dos se ven, sin jerarquías. Para viajes, salidas o simplemente sentirse acompañados a la distancia.",
+    title: "Tú y alguien más",
+    body: "Comparte tu ubicación en Modo Espejo: os veis los dos, sin jerarquías. Para viajes, planes o simplemente sentiros acompañados en la distancia.",
   },
   {
     icon: HeartHandshake,
     title: "Cuidado de mayores",
-    body: "Acompañá a un familiar mayor sin invadir su día a día. Modo Supervisión discreto, con alertas y botón de emergencia siempre disponibles.",
+    body: "Acompaña a un familiar mayor sin invadir su día a día. Modo Supervisión discreto, con alertas y botón de emergencia siempre disponibles.",
   },
   {
     icon: Briefcase,
     title: "Equipos de trabajo",
-    body: "Coordiná personal en movimiento — cadetes, técnicos, vendedores — con visibilidad en tiempo real desde un solo lugar.",
+    body: "Coordina personal en movimiento — mensajeros, técnicos, vendedores — con visibilidad en tiempo real desde un solo lugar.",
   },
 ];
 
@@ -35,7 +35,7 @@ const MODES = [
   {
     icon: Users,
     title: "Modo Espejo",
-    body: "Todos los miembros del Loop se ven entre sí. Ideal para pareja, amigos o compartir un viaje.",
+    body: "Eres el responsable del grupo y ves a todos sus miembros en directo, geolocalizados y sin errores — y ellos también te ven a ti. Ideal para amigos, familia o un viaje compartido.",
   },
   {
     icon: ShieldCheck,
@@ -54,7 +54,7 @@ export default function ProductosContent() {
           Productos
         </h1>
         <p className="text-lg text-loopy-700 leading-relaxed">
-          Loopy se adapta a cada Loop: elegí el caso que más se parece al tuyo.
+          Loopy se adapta a cada grupo: elige el caso que más se parece al tuyo.
         </p>
       </section>
 
@@ -69,13 +69,13 @@ export default function ProductosContent() {
           variants={fadeInUp}
           className="text-center text-sm font-bold text-bridge uppercase tracking-wide mb-2"
         >
-          Para cada tipo de Loop
+          Para cada tipo de Loopy
         </motion.p>
         <motion.h2
           variants={fadeInUp}
           className="text-2xl md:text-3xl font-extrabold text-loopy-900 text-center mb-10"
         >
-          ¿Para qué armás tu Loop?
+          ¿Para qué creas tu Loopy?
         </motion.h2>
 
         <div className="grid gap-6 sm:grid-cols-2">
@@ -112,7 +112,7 @@ export default function ProductosContent() {
           variants={fadeInUp}
           className="text-2xl md:text-3xl font-extrabold text-loopy-900 text-center mb-10"
         >
-          Todo se arma con dos modos
+          Todo se arma como tú quieras
         </motion.h2>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -120,13 +120,13 @@ export default function ProductosContent() {
             <motion.div
               key={m.title}
               variants={fadeInUp}
-              className="bg-white rounded-2xl shadow-card p-6 border border-loopy-100 hover:border-bridge/40 hover:shadow-card-hover transition-all"
+              className="bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 rounded-2xl shadow-card p-6 border border-white/20 hover:border-white/40 hover:shadow-card-hover transition-all"
             >
-              <div className="w-11 h-11 rounded-xl bg-bridge/12 flex items-center justify-center mb-3">
-                <m.icon size={20} className="text-bridge" />
+              <div className="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center mb-3">
+                <m.icon size={20} className="text-white" />
               </div>
-              <h3 className="font-bold text-loopy-900 mb-2">{m.title}</h3>
-              <p className="text-sm text-loopy-700">{m.body}</p>
+              <h3 className="font-bold text-white mb-2">{m.title}</h3>
+              <p className="text-sm text-white/80">{m.body}</p>
             </motion.div>
           ))}
         </div>
@@ -146,7 +146,7 @@ export default function ProductosContent() {
           >
             <Image
               src="/images/guia-de-uso/mapa.png"
-              alt="Pantalla de mapa de Loopy mostrando la ubicación en vivo de los integrantes de un Loop"
+              alt="Pantalla de mapa de Loopy mostrando la ubicación en vivo de los integrantes de un Loopy"
               fill
               className="object-cover"
               sizes="280px"
@@ -161,9 +161,9 @@ export default function ProductosContent() {
               La misma app, para cada caso
             </h2>
             <p className="text-loopy-700 leading-relaxed mb-6">
-              Sea cual sea tu Loop, la experiencia es la misma: simple, clara y
-              bajo tu control. Mirá todas las funciones en detalle o creá tu
-              cuenta y armalo en un minuto.
+              Sea cual sea tu Loopy, la experiencia es la misma: simple, clara
+              y bajo tu control. Mira todas las funciones en detalle o crea
+              tu cuenta y móntalo en un minuto.
             </p>
             <div className="flex flex-wrap justify-center md:justify-start gap-3">
               <Link

@@ -240,7 +240,7 @@ export default function LoopPage() {
           if (row.user_id === userId) return;
           const memberInfo = members.find((m) => m.user_id === row.user_id);
           setSosIncoming({
-            name: memberInfo?.profiles?.name || "Alguien del Loop",
+            name: memberInfo?.profiles?.name || "Alguien del Loopy",
             lat: row.lat,
             lng: row.lng,
           });
@@ -474,7 +474,7 @@ export default function LoopPage() {
   if (loading || !loop) {
     return (
       <main className="min-h-screen flex items-center justify-center text-loopy-700">
-        Cargando Loop...
+        Cargando Loopy...
       </main>
     );
   }
@@ -541,7 +541,7 @@ export default function LoopPage() {
           className="flex items-center gap-1 text-loopy-700 text-sm font-medium hover:text-loopy-900 transition-colors"
         >
           <ArrowLeft size={15} />
-          Mis Loops
+          Mis Loopys
         </Link>
         <div className="text-center">
           <h1 className="font-bold text-loopy-900">{loop.name}</h1>
@@ -643,7 +643,7 @@ export default function LoopPage() {
               Botón SOS
             </h2>
             <p className="text-xs text-loopy-700/70 mb-3">
-              Mantené presionado para avisar a todo el Loop y compartir tu
+              Mantén presionado para avisar a todo el Loopy y compartir tu
               ubicación exacta.
             </p>
             <button
@@ -660,7 +660,7 @@ export default function LoopPage() {
                 style={{ width: `${holdPct}%`, transition: "width 20ms linear" }}
               />
               <span className="relative text-sm">
-                {sosSent ? "Alerta enviada ✓" : "Mantené presionado — SOS"}
+                {sosSent ? "Alerta enviada ✓" : "Mantén presionado — SOS"}
               </span>
             </button>
           </motion.div>
@@ -803,7 +803,7 @@ export default function LoopPage() {
               className="bg-white rounded-xl border border-loopy-100 shadow-card p-4"
             >
               <h2 className="font-bold text-loopy-900 mb-2">
-                Configuración del Loop
+                Configuración del Loopy
               </h2>
               <label className="block text-xs text-loopy-700/70 mb-1">
                 Límite de velocidad (km/h)

@@ -18,18 +18,18 @@ import { fadeInUp, staggerContainer, revealOnce } from "@/lib/motion";
 const GUIDE_STEPS = [
   {
     icon: UserPlus,
-    title: "Creá tu Loop",
-    body: "Armá un grupo con la gente que quieras: pareja, familia, amigos o quien cuidás.",
+    title: "Crea tu Loopy",
+    body: "Crea un grupo con las personas que quieras: familia, amigos o quien cuides.",
   },
   {
     icon: SlidersHorizontal,
-    title: "Elegí el modo",
-    body: "Espejo para verse todos entre sí, o Supervisión para acompañar sin ser visto.",
+    title: "Elige el modo",
+    body: "Espejo, donde eres el responsable del grupo y ves a todos en directo, geolocalizados y sin errores; o Supervisión, para acompañar sin ser visto.",
   },
   {
     icon: MapPin,
-    title: "Compartí y listo",
-    body: "La ubicación se actualiza sola. Vos decidís cuándo pausarla o salir del Loop.",
+    title: "Comparte y listo",
+    body: "La ubicación se actualiza sola. Tú decides cuándo pausarla o salir del Loopy.",
   },
 ];
 
@@ -37,35 +37,35 @@ const FUNCTIONS = [
   {
     icon: MapPin,
     title: "Mapa en tiempo real",
-    body: "Vas a ver a cada persona de tu Loop en el mapa, en vivo, con su ubicación actualizándose sola. Cada una aparece con su nombre y su color, para identificarla de un vistazo.",
+    body: "Vas a ver a cada persona de tu Loopy en el mapa, en vivo, con su ubicación actualizándose sola. Cada una aparece con su nombre y su color, para identificarla de un vistazo.",
     image: "/images/guia-de-uso/mapa.png",
     alt: "Pantalla de mapa de Loopy mostrando la ubicación en vivo de tres integrantes de la familia",
   },
   {
     icon: Users,
     title: "Perfiles y permisos, por persona",
-    body: 'Cada integrante tiene su propio perfil, con su rol (Admin, hijo o hija) y su edad si corresponde. Vos decidís quién comparte ubicación con quién: los chicos, por ejemplo, solo comparten con los adultos del grupo.',
+    body: 'Cada integrante tiene su propio perfil, con su rol (Admin, hijo o hija) y su edad si corresponde. Tú decides quién comparte ubicación con quién: los chicos, por ejemplo, solo comparten con los adultos del grupo.',
     image: "/images/guia-de-uso/familia.png",
     alt: "Pantalla de perfiles de familia en Loopy con roles y permisos de cada integrante",
   },
   {
     icon: ShieldCheck,
     title: "Zonas seguras",
-    body: "Marcá los lugares importantes — la casa, el colegio, el club — y recibí un aviso apenas alguien entra o sale. Sabés al instante si tu hija llegó a casa o si tu hijo salió del colegio, sin tener que preguntar.",
+    body: "Marca los lugares importantes — la casa, el colegio, el club — y recibe un aviso apenas alguien entra o sale. Sabes al instante si tu hija llegó a casa o si tu hijo salió del colegio, sin tener que preguntar.",
     image: "/images/guia-de-uso/zonas.png",
     alt: "Pantalla de zonas seguras de Loopy con Casa, Colegio y Club marcados en el mapa",
   },
   {
     icon: Siren,
     title: "Botón SOS",
-    body: "Ante una emergencia, mantenés presionado el botón SOS y avisás al instante a todo tu Loop, compartiendo tu ubicación exacta. El resto ve la alerta en el momento y tiene a un toque el número de emergencia configurado.",
+    body: "Ante una emergencia, mantienes presionado el botón SOS y avisas al instante a todo tu Loopy, compartiendo tu ubicación exacta. El resto ve la alerta en el momento y tiene a un toque el número de emergencia configurado.",
     image: "/images/guia-de-uso/sos.png",
     alt: "Pantalla del botón de emergencia SOS de Loopy",
   },
   {
     icon: History,
     title: "Historial, rutas y alertas de velocidad",
-    body: "Mirá el recorrido del día en una línea de tiempo simple: a qué hora salió de casa, cuándo entró al colegio, cuándo volvió. Si alguien se desplaza más rápido de lo esperado — por encima del límite que vos configures — te llega un aviso al momento.",
+    body: "Mira el recorrido del día en una línea de tiempo simple: a qué hora salió de casa, cuándo entró al colegio, cuándo volvió. Si alguien se desplaza más rápido de lo esperado — por encima del límite que tú configures — te llega un aviso al momento.",
     image: "/images/guia-de-uso/rutas.png",
     alt: "Pantalla de historial y alertas de velocidad de Loopy con la línea de tiempo del día",
   },

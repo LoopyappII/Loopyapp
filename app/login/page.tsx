@@ -62,7 +62,7 @@ export default function LoginPage() {
               Bienvenido de nuevo
             </h1>
             <p className="text-sm text-loopy-700 text-center mt-1">
-              Ingresá para ver tus Loops y tu ubicación en tiempo real.
+              Accede para ver tus Loopys y tu ubicación en tiempo real.
             </p>
           </div>
 
@@ -98,12 +98,12 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white font-semibold shadow-cta hover:shadow-cta-hover disabled:opacity-60"
             >
-              {loading ? "Ingresando..." : "Ingresar"}
+              {loading ? "Accediendo..." : "Acceder"}
             </motion.button>
             <p className="text-sm text-loopy-700 mt-4 text-center">
-              ¿No tenés cuenta?{" "}
+              ¿No tienes cuenta?{" "}
               <Link href="/signup" className="text-bridge font-medium">
-                Creá una
+                Crea una
               </Link>
             </p>
           </form>

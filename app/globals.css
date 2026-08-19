@@ -47,3 +47,34 @@ body {
 .skiptranslate iframe {
   display: none !important;
 }
+
+/* Selector de teléfono (react-phone-number-input) en signup, alineado al
+   resto de inputs del formulario: fondo blanco, borde loopy-50, foco bridge/60 */
+.loopy-phone-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #ffffff;
+  border: 1px solid #eef1fb; /* border-loopy-50 */
+  border-radius: 0.5rem; /* rounded-lg */
+  padding: 0.5rem 0.75rem;
+}
+.loopy-phone-input:focus-within {
+  box-shadow: 0 0 0 2px rgba(131, 76, 156, 0.6); /* bridge/60 */
+}
+.loopy-phone-input .PhoneInputInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #232a52; /* loopy-900 */
+  font-size: 0.875rem;
+}
+.loopy-phone-input .PhoneInputCountry {
+  margin-right: 0.25rem;
+}
+.loopy-phone-input .PhoneInputCountrySelect:focus + .PhoneInputCountryIcon {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(131, 76, 156, 0.6); /* bridge/60 */
+  border-radius: 0.25rem;
+}

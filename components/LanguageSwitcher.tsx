@@ -14,7 +14,12 @@ const LANGS: { code: string; label: string }[] = [
   { code: "fr", label: "Français" },
   { code: "de", label: "Deutsch" },
   { code: "it", label: "Italiano" },
+  { code: "zh-CN", label: "中文" },
+  { code: "ja", label: "日本語" },
+  { code: "tr", label: "Türkçe" },
 ];
+
+const COOKIE_CONSENT_KEY = "loopy-cookie-consent";
 
 declare global {
   interface Window {
@@ -28,10 +33,13 @@ export default function LanguageSwitcher() {
   const [current, setCurrent] = useState("es");
 
   useEffect(() => {
-    const match = document.cookie.match(/googtrans=\/es\/(\w+)/);
+    const match = document.cookie.match(/googtrans=\/es\/([\w-]+)/);
     if (match) setCurrent(match[1]);
 
     if (document.getElementById("google-translate-script")) return;
+    // El traductor no es esencial: solo lo cargamos (y solo entonces setea su
+    // cookie googtrans) si el usuario ya aceptó cookies en el banner.
+    if (localStorage.getItem(COOKIE_CONSENT_KEY) !== "accepted") return;
 
     window.googleTranslateElementInit = () => {
       if (!window.google?.translate?.TranslateElement) return;

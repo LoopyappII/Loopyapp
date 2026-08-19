@@ -18,7 +18,7 @@ const TEAM_PHOTOS = [
 const SECURITY_POINTS = [
   { icon: Lock, text: "Tu ubicación viaja cifrada, siempre." },
   { icon: Server, text: "Guardada en servidores cuidados y monitoreados." },
-  { icon: ShieldCheck, text: "Nunca se comparte con nadie que no elijas vos." },
+  { icon: ShieldCheck, text: "Nunca se comparte con nadie que no elijas tú." },
 ];
 
 export default function QuienesSomosContent() {
@@ -33,8 +33,8 @@ export default function QuienesSomosContent() {
         <p className="text-lg text-loopy-700 leading-relaxed">
           Loopy es un proyecto de LOOPER CASHLINE SL pensado para que compartir tu
           ubicación sea simple, seguro y bajo tu control. Creemos que cuidar a la
-          gente que querés no debería requerir apps complicadas — por eso
-          construimos algo liviano y claro, donde vos decidís quién ve qué y por
+          gente que quieres no debería requerir apps complicadas — por eso
+          construimos algo liviano y claro, donde tú decides quién ve qué y por
           cuánto tiempo.
         </p>
       </section>
@@ -92,8 +92,8 @@ export default function QuienesSomosContent() {
               Tu información, bien resguardada
             </h2>
             <p className="text-loopy-700 leading-relaxed mb-6">
-              Detrás de cada Loop hay un servidor que cuida tus datos con el
-              mismo cuidado que le pondrías vos. No hace falta entender de
+              Detrás de cada Loopy hay un servidor que cuida tus datos con el
+              mismo cuidado que le pondrías tú. No hace falta entender de
               tecnología para sentirte tranquilo — nosotros nos encargamos de
               que todo funcione simple, y seguro, todos los días.
             </p>
