@@ -23,13 +23,17 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!phone) {
+      setError("El teléfono es obligatorio.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name, phone: phone || null },
+        data: { name, phone },
         emailRedirectTo: "https://loopy.company/login",
       },
     });
@@ -121,13 +125,14 @@ export default function SignupPage() {
                 required
               />
               <label className="block text-sm font-medium text-loopy-900 mb-1">
-                Teléfono <span className="text-loopy-700/50 font-normal">(opcional)</span>
+                Teléfono
               </label>
               <PhoneInput
                 value={phone}
                 onChange={(value) => setPhone(value || "")}
                 placeholder="+34 600 000 000"
                 international
+                required
                 className="loopy-phone-input w-full mb-4"
               />
               <label className="block text-sm font-medium text-loopy-900 mb-1">

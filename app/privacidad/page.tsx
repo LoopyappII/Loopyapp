@@ -43,14 +43,17 @@ export default function PrivacidadPage() {
                   1. Responsable del tratamiento
                 </h2>
                 <p>
-                  <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>,
-                  titular de la aplicación Loopy (loopy.company), es responsable
-                  del tratamiento de tus datos personales. Puedes contactarnos en{" "}
+                  <strong className="text-loopy-900">LOOPER CAPITAL SL</strong>{" "}
+                  (CIF B73946113), bajo la gestión de{" "}
+                  <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>{" "}
+                  (CIF B73981417), titular de la aplicación Loopy
+                  (loopy.company), es responsable del tratamiento de tus datos
+                  personales. Puedes contactarnos en{" "}
                   <a
-                    href="mailto:hola@loopy.company"
+                    href="mailto:info@directloopy.com"
                     className="text-bridge font-medium hover:underline"
                   >
-                    hola@loopy.company
+                    info@directloopy.com
                   </a>
                   .
                 </p>
@@ -139,10 +142,10 @@ export default function PrivacidadPage() {
                   rectificación, supresión, limitación, portabilidad y oposición
                   al tratamiento de tus datos, escribiendo a{" "}
                   <a
-                    href="mailto:hola@loopy.company"
+                    href="mailto:info@directloopy.com"
                     className="text-bridge font-medium hover:underline"
                   >
-                    hola@loopy.company
+                    info@directloopy.com
                   </a>
                   . También tienes derecho a presentar una reclamación ante la
                   Agencia Española de Protección de Datos (AEPD) si consideras
