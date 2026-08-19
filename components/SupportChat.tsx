@@ -10,7 +10,7 @@ interface FaqItem {
   keywords: string[];
 }
 
-const SUPPORT_EMAIL = "hola@loopy.company";
+const SUPPORT_EMAIL = "info@directloopy.com";
 
 const FAQS: FaqItem[] = [
   {

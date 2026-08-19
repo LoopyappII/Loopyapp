@@ -34,9 +34,12 @@ export default function TerminosPage() {
               <p>
                 Los presentes Términos y Condiciones regulan el acceso y uso de la
                 aplicación <strong className="text-loopy-900">Loopy</strong> (en
-                adelante, "la Aplicación" o "el Servicio"), titularidad de{" "}
-                <strong className="text-loopy-900">LOOPER CASHLINE SL</strong> (en
-                adelante, "Loopy" o "nosotros"), disponible a través de{" "}
+                adelante, "la Aplicación" o "el Servicio"), propiedad de{" "}
+                <strong className="text-loopy-900">LOOPER CAPITAL SL</strong>{" "}
+                (CIF B73946113), bajo la gestión de{" "}
+                <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>{" "}
+                (CIF B73981417) (en adelante, "Loopy" o "nosotros"), disponible
+                a través de{" "}
                 <span className="text-loopy-900">loopy.company</span>. El uso de la
                 Aplicación implica la aceptación plena de estos términos.
               </p>
@@ -127,8 +130,9 @@ export default function TerminosPage() {
                 </h2>
                 <p>
                   El software, diseño, marca y demás elementos de Loopy son
-                  propiedad de LOOPER CASHLINE SL o de sus licenciantes. No se
-                  concede al usuario ningún derecho sobre estos elementos más allá
+                  propiedad de LOOPER CAPITAL SL (CIF B73946113), gestionados
+                  por LOOPER CASHLINE SL (CIF B73981417), o de sus
+                  licenciantes. No se concede al usuario ningún derecho sobre estos elementos más allá
                   del uso personal de la Aplicación conforme a estos términos.
                 </p>
               </div>
@@ -177,10 +181,10 @@ export default function TerminosPage() {
                   Para cualquier consulta sobre estos Términos, puedes escribirnos
                   a{" "}
                   <a
-                    href="mailto:hola@loopy.company"
+                    href="mailto:info@directloopy.com"
                     className="text-bridge font-medium hover:underline"
                   >
-                    hola@loopy.company
+                    info@directloopy.com
                   </a>
                   .
                 </p>

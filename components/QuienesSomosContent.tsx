@@ -31,8 +31,9 @@ export default function QuienesSomosContent() {
           Quiénes somos
         </h1>
         <p className="text-lg text-loopy-700 leading-relaxed">
-          Loopy es un proyecto de LOOPER CASHLINE SL pensado para que compartir tu
-          ubicación sea simple, seguro y bajo tu control. Creemos que cuidar a la
+          Loopy es un proyecto de LOOPER CAPITAL SL (CIF B73946113), bajo la
+          gestión de LOOPER CASHLINE SL (CIF B73981417), pensado para que
+          compartir tu ubicación sea simple, seguro y bajo tu control. Creemos que cuidar a la
           gente que quieres no debería requerir apps complicadas — por eso
           construimos algo liviano y claro, donde tú decides quién ve qué y por
           cuánto tiempo.
