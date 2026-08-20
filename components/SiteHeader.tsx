@@ -23,8 +23,6 @@ export default function SiteHeader() {
             encryptedClassName="text-loopy-500/40"
             revealedClassName="text-bridge"
             revealDelayMs={45}
-            loop
-            holdMs={2400}
           />
         </div>
       </div>

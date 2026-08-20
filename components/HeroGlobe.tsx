@@ -1,10 +1,50 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 
 // three + WebGL no existen en el servidor: se carga solo en cliente. Al estar
 // detrás de ssr:false no hay riesgo de mismatch de hidratación.
 const Globe = dynamic(() => import("./ui/globe"), { ssr: false });
+
+// El procesamiento de las 127 features de tierra (curvas + tubos 3D por
+// cada contorno de costa) es pesado y 100% síncrono: sin esperar a que el
+// hilo principal esté libre, esto bloquea la página entera por varios
+// segundos apenas monta — incluyendo el header y el botón de CTA, que
+// deberían quedar interactivos de inmediato. requestIdleCallback deja que
+// el resto de la página (header, texto del hero, CTA) pinte y se vuelva
+// interactivo primero; el globo (decorativo, aria-hidden) aparece un
+// instante después sin competir por el hilo principal.
+function useIdle(timeout = 1500) {
+  const [idle, setIdle] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(() => setIdle(true), { timeout });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = setTimeout(() => setIdle(true), 200);
+    return () => clearTimeout(id);
+  }, [timeout]);
+  return idle;
+}
+
+// MagnifierLanding monta dos <HeroGlobe/> (uno para desktop, oculto por
+// CSS en mobile, y otro al revés) para poder darle a cada uno una
+// posición/tamaño distinto — pero eso significaba construir el globo 3D
+// completo DOS VECES en simultáneo aunque solo uno se vea nunca. Este hook
+// deja que cada instancia sepa si le toca existir de verdad.
+function useMatchMedia(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(query);
+    setMatches(mql.matches);
+    const onChange = () => setMatches(mql.matches);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [query]);
+  return matches;
+}
 
 // Paleta de marca (loopy-500, bridge, glow-500) para que los puntos y arcos
 // del globo se lean como "puntos Loopy" en vez de los colores por defecto.
@@ -70,9 +110,13 @@ const CONNECTION_PAIRS: [number, number][] = [
 // MagnifierLanding) — así nunca queda atado a un solo layout. pointer-events-
 // none porque es decorativo, no interactivo (si no, el drag para rotar se
 // roba el scroll táctil).
-export default function HeroGlobe() {
+export default function HeroGlobe({ mediaQuery }: { mediaQuery?: string }) {
+  const idle = useIdle();
+  const visible = useMatchMedia(mediaQuery || "all");
+  const shouldRender = idle && (!mediaQuery || visible);
   return (
     <div aria-hidden="true" className="pointer-events-none h-full w-full">
+      {shouldRender && (
       <Globe
         speed={2}
         smoothing={8}
@@ -105,6 +149,7 @@ export default function HeroGlobe() {
           baseOpacity: 0.14,
         }}
       />
+      )}
     </div>
   );
 }
