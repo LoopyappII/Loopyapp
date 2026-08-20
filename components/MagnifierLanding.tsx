@@ -27,7 +27,7 @@ function LandingContent() {
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-32 -right-28 hidden lg:block lg:w-[900px] lg:h-[900px] xl:w-[1000px] xl:h-[1000px]"
         >
-          <HeroGlobe />
+          <HeroGlobe mediaQuery="(min-width: 1024px)" />
         </div>
 
         <motion.div
@@ -90,7 +90,7 @@ function LandingContent() {
               aria-hidden="true"
               className="pointer-events-none absolute -bottom-16 -right-14 w-[420px] h-[420px] sm:-bottom-20 sm:-right-16 sm:w-[520px] sm:h-[520px]"
             >
-              <HeroGlobe />
+              <HeroGlobe mediaQuery="(max-width: 1023px)" />
             </div>
           </div>
         </motion.div>
