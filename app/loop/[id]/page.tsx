@@ -288,6 +288,35 @@ export default function LoopPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loopId, members, userId]);
 
+  // Realtime: zonas seguras nuevas creadas por otros miembros del Loop.
+  // Sin esto, una zona creada por el admin solo llegaba a los demás
+  // miembros al recargar la página (encontrado en auditoría de producción).
+  useEffect(() => {
+    if (!loopId) return;
+    const channel = supabase
+      .channel(`zones-${loopId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "safe_zones",
+          filter: `loop_id=eq.${loopId}`,
+        },
+        (payload) => {
+          const row = payload.new as SafeZone;
+          setZones((prev) =>
+            prev.some((z) => z.id === row.id) ? prev : [...prev, row]
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loopId]);
+
   // Geolocalización propia + push a Supabase + chequeo de zonas y velocidad
   useEffect(() => {
     if (!userId || !loopId || typeof window === "undefined") return;
