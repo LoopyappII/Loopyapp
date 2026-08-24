@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Siren } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoop } from "../LoopContext";
@@ -10,6 +10,20 @@ export default function SosPage() {
   const [holdPct, setHoldPct] = useState(0);
   const [sosSent, setSosSent] = useState(false);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // This page lives in a route segment (/loop/[id]/sos) that unmounts on
+  // every tab navigation. Without this, a hold in progress (setInterval
+  // ticking toward triggerSOS) or the post-trigger reset (setTimeout) could
+  // outlive the component — e.g. a touch-cancel gesture, an incoming call,
+  // or navigating away mid-press — and still fire a real emergency alert (or
+  // a stray state update) from a screen the user already left.
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) clearInterval(holdTimerRef.current);
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
 
   function startHold() {
     if (sosSent) return;
@@ -38,7 +52,7 @@ export default function SosPage() {
       lat: myPos?.lat ?? 0,
       lng: myPos?.lng ?? 0,
     });
-    setTimeout(() => {
+    resetTimerRef.current = setTimeout(() => {
       setSosSent(false);
       setHoldPct(0);
     }, 4000);
@@ -60,6 +74,7 @@ export default function SosPage() {
           onMouseLeave={cancelHold}
           onTouchStart={startHold}
           onTouchEnd={cancelHold}
+          onTouchCancel={cancelHold}
           disabled={sosSent}
           className="relative w-full overflow-hidden rounded-full bg-red-600 text-white font-bold py-3 select-none disabled:opacity-90"
         >
