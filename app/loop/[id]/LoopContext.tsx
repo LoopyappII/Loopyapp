@@ -47,7 +47,8 @@ export interface LoopContextValue {
   saveAge: (age: number) => Promise<void>;
   saveLoopSettings: (
     speedLimitKmh: number | null,
-    emergencyNumber: string | null
+    emergencyNumber: string | null,
+    primaryContactNumber: string | null
   ) => Promise<{ error: string | null }>;
 }
 

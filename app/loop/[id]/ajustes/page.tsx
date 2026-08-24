@@ -7,6 +7,7 @@ export default function AjustesPage() {
   const { loop, isAdmin, saveLoopSettings } = useLoop();
   const [speedLimitInput, setSpeedLimitInput] = useState(loop.speed_limit_kmh?.toString() || "");
   const [emergencyNumberInput, setEmergencyNumberInput] = useState(loop.emergency_number || "");
+  const [primaryContactInput, setPrimaryContactInput] = useState(loop.primary_contact_number || "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -16,7 +17,8 @@ export default function AjustesPage() {
     setError(null);
     const { error } = await saveLoopSettings(
       speedLimitInput ? Number(speedLimitInput) : null,
-      emergencyNumberInput || null
+      emergencyNumberInput || null,
+      primaryContactInput || null
     );
     if (error) setError(error);
     setSaving(false);
@@ -50,6 +52,14 @@ export default function AjustesPage() {
             className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
             value={emergencyNumberInput}
             onChange={(e) => setEmergencyNumberInput(e.target.value)}
+          />
+          <label className="block text-xs text-loopy-700/70 mb-1">Número de primer contacto</label>
+          <input
+            type="tel"
+            placeholder="Ej. mamá o papá"
+            className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
+            value={primaryContactInput}
+            onChange={(e) => setPrimaryContactInput(e.target.value)}
           />
           {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
           <button

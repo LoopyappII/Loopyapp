@@ -18,6 +18,7 @@ export interface Loop {
   created_at: string;
   speed_limit_kmh: number | null;
   emergency_number: string | null;
+  primary_contact_number: string | null;
 }
 
 export interface LoopMember {

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Siren } from "lucide-react";
+import { Siren, Phone } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoop } from "../LoopContext";
 
 export default function SosPage() {
-  const { userId, loopId, myPos } = useLoop();
+  const { userId, loopId, myPos, loop, members } = useLoop();
+  const notifiedCount = Math.max(0, members.filter((m) => m.user_id !== userId).length);
   const [holdPct, setHoldPct] = useState(0);
   const [sosSent, setSosSent] = useState(false);
   const holdTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -65,9 +66,14 @@ export default function SosPage() {
           <Siren size={16} className="text-red-600" />
           Botón SOS
         </h2>
-        <p className="text-xs text-loopy-700/70 mb-5">
+        <p className="text-xs text-loopy-700/70 mb-1">
           Mantén presionado para avisar a todo el Loopy y compartir tu ubicación exacta.
         </p>
+        {notifiedCount > 0 && (
+          <p className="text-xs text-loopy-700/50 mb-4">
+            Se notifica a {notifiedCount} {notifiedCount === 1 ? "persona" : "personas"}
+          </p>
+        )}
         <div className="flex items-center justify-center py-2">
           <button
             onMouseDown={startHold}
@@ -88,6 +94,35 @@ export default function SosPage() {
             </span>
           </button>
         </div>
+
+        {(loop.emergency_number || loop.primary_contact_number) && (
+          <div className="mt-5 space-y-2">
+            {loop.emergency_number && (
+              <a
+                href={`tel:${loop.emergency_number}`}
+                className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-loopy-100 hover:border-bridge/40 transition-colors"
+              >
+                <span className="text-sm font-medium text-loopy-900">Número de emergencia</span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-bridge">
+                  <Phone size={14} />
+                  {loop.emergency_number}
+                </span>
+              </a>
+            )}
+            {loop.primary_contact_number && (
+              <a
+                href={`tel:${loop.primary_contact_number}`}
+                className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-loopy-100 hover:border-bridge/40 transition-colors"
+              >
+                <span className="text-sm font-medium text-loopy-900">Primer contacto</span>
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-bridge">
+                  <Phone size={14} />
+                  {loop.primary_contact_number}
+                </span>
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

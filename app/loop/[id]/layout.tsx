@@ -304,11 +304,16 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
 
   async function saveLoopSettings(
     speedLimitKmh: number | null,
-    emergencyNumber: string | null
+    emergencyNumber: string | null,
+    primaryContactNumber: string | null
   ): Promise<{ error: string | null }> {
     const { data, error } = await supabase
       .from("loops")
-      .update({ speed_limit_kmh: speedLimitKmh, emergency_number: emergencyNumber })
+      .update({
+        speed_limit_kmh: speedLimitKmh,
+        emergency_number: emergencyNumber,
+        primary_contact_number: primaryContactNumber,
+      })
       .eq("id", loopId)
       .select()
       .single();
