@@ -6,6 +6,7 @@ export interface Profile {
   name: string | null;
   avatar_url: string | null;
   phone: string | null;
+  age: number | null;
 }
 
 export interface Loop {
@@ -15,6 +16,8 @@ export interface Loop {
   invite_code: string;
   admin_id: string;
   created_at: string;
+  speed_limit_kmh: number | null;
+  emergency_number: string | null;
 }
 
 export interface LoopMember {
@@ -41,4 +44,24 @@ export interface SafeZone {
   lat: number;
   lng: number;
   radius_m: number;
+}
+
+export interface SpeedAlert {
+  id: string;
+  loop_id: string;
+  user_id: string;
+  speed_kmh: number;
+  limit_kmh: number;
+  lat: number;
+  lng: number;
+  created_at: string;
+}
+
+export interface SosAlert {
+  id: string;
+  loop_id: string;
+  user_id: string;
+  lat: number;
+  lng: number;
+  created_at: string;
 }

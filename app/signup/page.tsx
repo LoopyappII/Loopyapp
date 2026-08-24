@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 import { supabase } from "@/lib/supabaseClient";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { fadeInUp, scaleIn } from "@/lib/motion";
@@ -21,13 +23,17 @@ export default function SignupPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!phone) {
+      setError("El teléfono es obligatorio.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { name, phone: phone || null },
+        data: { name, phone },
         emailRedirectTo: "https://loopy.company/login",
       },
     });
@@ -53,7 +59,7 @@ export default function SignupPage() {
           href="/login"
           className="px-4 py-2 text-loopy-700 font-medium hover:text-loopy-900 transition-colors"
         >
-          Ingresar
+          Acceder
         </Link>
       </header>
 
@@ -77,13 +83,13 @@ export default function SignupPage() {
               ¡Cuenta creada!
             </h1>
             <p className="text-loopy-700">
-              Revisá tu email para confirmar la cuenta antes de ingresar.
+              Revisa tu email para confirmar la cuenta antes de acceder.
             </p>
             <Link
               href="/login"
               className="text-bridge font-medium mt-4 inline-block"
             >
-              Ir a ingresar
+              Ir a acceder
             </Link>
           </motion.div>
         ) : (
@@ -98,7 +104,7 @@ export default function SignupPage() {
                 Crear cuenta
               </span>
               <h1 className="text-2xl font-extrabold text-loopy-900 text-center">
-                Sumate a Loopy
+                Súmate a Loopy
               </h1>
               <p className="text-sm text-loopy-700 text-center mt-1">
                 Gratis los primeros 2 días, 14€/mes después.
@@ -119,15 +125,15 @@ export default function SignupPage() {
                 required
               />
               <label className="block text-sm font-medium text-loopy-900 mb-1">
-                Teléfono <span className="text-loopy-700/50 font-normal">(opcional)</span>
+                Teléfono
               </label>
-              <input
-                type="tel"
-                autoComplete="tel"
-                placeholder="+34 600 000 000"
-                className="w-full mb-4 px-3 py-2 rounded-lg border border-loopy-50 focus:outline-none focus:ring-2 focus:ring-bridge/60"
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(value) => setPhone(value || "")}
+                placeholder="+34 600 000 000"
+                international
+                required
+                className="loopy-phone-input w-full mb-4"
               />
               <label className="block text-sm font-medium text-loopy-900 mb-1">
                 Email
@@ -161,7 +167,7 @@ export default function SignupPage() {
                 {loading ? "Creando..." : "Crear cuenta"}
               </motion.button>
               <p className="text-xs text-loopy-700/60 mt-3 text-center">
-                Al crear tu cuenta aceptás los{" "}
+                Al crear tu cuenta aceptas los{" "}
                 <Link href="/terminos" className="text-bridge font-medium hover:underline">
                   Términos
                 </Link>{" "}
@@ -172,9 +178,9 @@ export default function SignupPage() {
                 .
               </p>
               <p className="text-sm text-loopy-700 mt-4 text-center">
-                ¿Ya tenés cuenta?{" "}
+                ¿Ya tienes cuenta?{" "}
                 <Link href="/login" className="text-bridge font-medium">
-                  Ingresá
+                  Accede
                 </Link>
               </p>
             </form>

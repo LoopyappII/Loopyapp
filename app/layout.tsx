@@ -4,6 +4,7 @@ import "./globals.css";
 import RegisterSW from "@/components/RegisterSW";
 import SupportChat from "@/components/SupportChat";
 import BackgroundDecor from "@/components/BackgroundDecor";
+import CookieConsent from "@/components/CookieConsent";
 import { FAVICON_SRC } from "@/lib/favicon";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -12,14 +13,31 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+const SITE_URL = "https://loopy.company";
+const DESCRIPTION = "Comparte tu ubicación en tiempo real, de forma simple y segura";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Loopy",
-  description: "Compartí tu ubicación en tiempo real, de forma simple y segura",
+  description: DESCRIPTION,
   manifest: "/manifest.json",
   icons: {
     icon: FAVICON_SRC,
     shortcut: FAVICON_SRC,
     apple: FAVICON_SRC,
+  },
+  openGraph: {
+    title: "Loopy",
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: "Loopy",
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Loopy",
+    description: DESCRIPTION,
   },
 };
 
@@ -39,6 +57,7 @@ export default function RootLayout({
         <RegisterSW />
         {children}
         <SupportChat />
+        <CookieConsent />
       </body>
     </html>
   );

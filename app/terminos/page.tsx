@@ -34,9 +34,12 @@ export default function TerminosPage() {
               <p>
                 Los presentes Términos y Condiciones regulan el acceso y uso de la
                 aplicación <strong className="text-loopy-900">Loopy</strong> (en
-                adelante, "la Aplicación" o "el Servicio"), titularidad de{" "}
-                <strong className="text-loopy-900">LOOPER CASHLINE SL</strong> (en
-                adelante, "Loopy" o "nosotros"), disponible a través de{" "}
+                adelante, "la Aplicación" o "el Servicio"), propiedad de{" "}
+                <strong className="text-loopy-900">LOOPER CAPITAL SL</strong>{" "}
+                (CIF B73946113), bajo la gestión de{" "}
+                <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>{" "}
+                (CIF B73981417) (en adelante, "Loopy" o "nosotros"), disponible
+                a través de{" "}
                 <span className="text-loopy-900">loopy.company</span>. El uso de la
                 Aplicación implica la aceptación plena de estos términos.
               </p>
@@ -46,11 +49,11 @@ export default function TerminosPage() {
                   1. Objeto del servicio
                 </h2>
                 <p>
-                  Loopy es una aplicación que permite crear grupos ("Loops") para
+                  Loopy es una aplicación que permite crear grupos ("Loopys") para
                   compartir ubicación en tiempo real entre sus miembros, con dos
                   modalidades: <strong>Modo Espejo</strong> (todos los miembros se
                   ven entre sí) y <strong>Modo Supervisión</strong> (un supervisor
-                  visualiza la ubicación de los demás miembros del Loop). El
+                  visualiza la ubicación de los demás miembros del Loopy). El
                   Servicio también permite definir zonas de interés y recibir
                   notificaciones al entrar o salir de ellas.
                 </p>
@@ -78,8 +81,8 @@ export default function TerminosPage() {
                   El funcionamiento de Loopy requiere acceso a la ubicación
                   geográfica del dispositivo del usuario mientras la Aplicación
                   está en uso. El usuario controla en todo momento con quién
-                  comparte su ubicación a través de los Loops a los que se une, y
-                  puede abandonar un Loop en cualquier momento para dejar de
+                  comparte su ubicación a través de los Loopys a los que se une, y
+                  puede abandonar un Loopy en cualquier momento para dejar de
                   compartir su ubicación. Más detalles sobre el tratamiento de
                   estos datos en nuestra{" "}
                   <Link
@@ -113,7 +116,7 @@ export default function TerminosPage() {
                 <p>
                   El usuario se compromete a utilizar la Aplicación de forma
                   lícita, sin vulnerar derechos de terceros y, en particular, a no
-                  crear Loops ni compartir ubicación de terceras personas sin su
+                  crear Loopys ni compartir ubicación de terceras personas sin su
                   consentimiento expreso. El uso indebido del Servicio para
                   fines de acoso, control no consentido o vigilancia ilegítima
                   está expresamente prohibido y podrá dar lugar a la suspensión
@@ -127,8 +130,9 @@ export default function TerminosPage() {
                 </h2>
                 <p>
                   El software, diseño, marca y demás elementos de Loopy son
-                  propiedad de LOOPER CASHLINE SL o de sus licenciantes. No se
-                  concede al usuario ningún derecho sobre estos elementos más allá
+                  propiedad de LOOPER CAPITAL SL (CIF B73946113), gestionados
+                  por LOOPER CASHLINE SL (CIF B73981417), o de sus
+                  licenciantes. No se concede al usuario ningún derecho sobre estos elementos más allá
                   del uso personal de la Aplicación conforme a estos términos.
                 </p>
               </div>
@@ -174,13 +178,13 @@ export default function TerminosPage() {
                   10. Contacto
                 </h2>
                 <p>
-                  Para cualquier consulta sobre estos Términos, podés escribirnos
+                  Para cualquier consulta sobre estos Términos, puedes escribirnos
                   a{" "}
                   <a
-                    href="mailto:hola@loopy.company"
+                    href="mailto:info@directloopy.com"
                     className="text-bridge font-medium hover:underline"
                   >
-                    hola@loopy.company
+                    info@directloopy.com
                   </a>
                   .
                 </p>
