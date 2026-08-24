@@ -17,7 +17,7 @@ export default function FamiliaPage() {
 
   return (
     <div className="flex-1 p-4">
-      <div className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
+      <div className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
         <h2 className="font-bold text-loopy-900 mb-2">Miembros</h2>
         <ul className="text-sm space-y-1">
           {members.map((m) => (

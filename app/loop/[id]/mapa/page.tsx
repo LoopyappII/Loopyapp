@@ -45,7 +45,7 @@ export default function MapaPage() {
       <div className="relative flex-1 min-h-[45vh]">
         <LiveMap members={memberList} zones={mapZones} center={center} route={mapRoute} />
         {routeMemberName && (
-          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-white/95 backdrop-blur-sm border border-loopy-100 shadow-card rounded-full pl-3 pr-1.5 py-1.5">
+          <div className="absolute top-3 left-3 z-10 flex items-center gap-2 bg-white/95 backdrop-blur-sm border border-loopy-100 shadow-card md:shadow-card-hover rounded-full pl-3 pr-1.5 py-1.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ROUTE_COLOR }} />
             <span className="text-xs font-medium text-loopy-900">
               {routeLoading

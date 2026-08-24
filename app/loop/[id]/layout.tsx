@@ -376,67 +376,69 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <LoopContext.Provider value={value}>
-      <main className="relative min-h-screen flex flex-col">
-        <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-loopy-100 bg-white/80 backdrop-blur-md">
-          <Link href="/dashboard" aria-label="Volver a Mis Loopys">
-            <NavbarLogo size={26} />
-          </Link>
-          <Link
-            href={`/loop/${loopId}/ajustes`}
-            aria-label="Ajustes del Loopy"
-            className="w-9 h-9 rounded-full flex items-center justify-center text-loopy-700 hover:bg-loopy-50 hover:text-loopy-900 transition-colors"
-          >
-            <Settings size={18} />
-          </Link>
-        </header>
-
-        <AnimatePresence>
-          {sosIncoming && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-20 overflow-hidden bg-red-600 text-white"
+      <main className="relative min-h-screen flex flex-col md:flex-row bg-loopy-50/40">
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-loopy-100 bg-white/80 backdrop-blur-md">
+            <Link href="/dashboard" aria-label="Volver a Mis Loopys">
+              <NavbarLogo size={26} />
+            </Link>
+            <Link
+              href={`/loop/${loopId}/ajustes`}
+              aria-label="Ajustes del Loopy"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-loopy-700 hover:bg-loopy-50 hover:text-loopy-900 transition-colors"
             >
-              <div className="max-w-md mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="font-semibold text-sm">🆘 Alerta de {sosIncoming.name} — necesita ayuda</span>
-                <div className="flex items-center gap-2">
-                  {loop.emergency_number && (
-                    <a
-                      href={`tel:${loop.emergency_number}`}
-                      className="px-3 py-1.5 rounded-full bg-white text-red-600 text-xs font-bold"
+              <Settings size={18} />
+            </Link>
+          </header>
+
+          <AnimatePresence>
+            {sosIncoming && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="relative z-20 overflow-hidden bg-red-600 text-white"
+              >
+                <div className="max-w-md mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2 md:max-w-3xl">
+                  <span className="font-semibold text-sm">🆘 Alerta de {sosIncoming.name} — necesita ayuda</span>
+                  <div className="flex items-center gap-2">
+                    {loop.emergency_number && (
+                      <a
+                        href={`tel:${loop.emergency_number}`}
+                        className="px-3 py-1.5 rounded-full bg-white text-red-600 text-xs font-bold"
+                      >
+                        Llamar a emergencias
+                      </a>
+                    )}
+                    <button
+                      onClick={() => setSosIncoming(null)}
+                      className="px-3 py-1.5 rounded-full border border-white/40 text-xs font-semibold"
                     >
-                      Llamar a emergencias
-                    </a>
-                  )}
-                  <button
-                    onClick={() => setSosIncoming(null)}
-                    className="px-3 py-1.5 rounded-full border border-white/40 text-xs font-semibold"
-                  >
-                    Cerrar
-                  </button>
+                      Cerrar
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        <AnimatePresence>
-          {banner && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-              className="relative z-10 overflow-hidden bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white text-sm text-center shadow-[0_4px_16px_rgba(131,76,156,0.35)]"
-            >
-              <div className="py-2">{banner}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <AnimatePresence>
+            {banner && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="relative z-10 overflow-hidden bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white text-sm text-center shadow-[0_4px_16px_rgba(131,76,156,0.35)]"
+              >
+                <div className="py-2">{banner}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        <div className="relative z-0 flex-1 max-w-md mx-auto w-full flex flex-col">{children}</div>
+          <div className="relative z-0 flex-1 max-w-md mx-auto w-full flex flex-col md:max-w-3xl md:mx-0 md:px-8 lg:px-10">{children}</div>
+        </div>
 
         <BottomTabBar loopId={loopId} />
       </main>

@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
   return (
     <main className="relative min-h-screen">
-      <div className="relative z-10 px-6 py-8 max-w-md mx-auto">
+      <div className="relative z-10 px-6 py-8 max-w-md mx-auto md:max-w-2xl lg:max-w-3xl">
         <div className="flex items-center justify-between mb-8">
           <NavbarLogo size={32} dark />
           <button
@@ -198,7 +198,7 @@ export default function DashboardPage() {
           <p className="text-red-600 text-sm mb-4">{formError}</p>
         )}
 
-        <div className="grid gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <form
             onSubmit={handleCreateLoop}
             className="bg-white rounded-2xl border border-loopy-100 shadow-card p-6"
