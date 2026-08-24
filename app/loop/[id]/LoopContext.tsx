@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { Loop, LoopMember, SafeZone, SpeedAlert } from "@/lib/types";
+import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert } from "@/lib/types";
 import type { MapMember } from "@/components/LiveMap";
 
 export interface ZoneEventRow {
@@ -50,6 +50,14 @@ export interface LoopContextValue {
     emergencyNumber: string | null,
     primaryContactNumber: string | null
   ) => Promise<{ error: string | null }>;
+  addPendingMember: (
+    name: string,
+    phone: string,
+    colorSlug: string,
+    role: MemberRole
+  ) => Promise<{ error: string | null }>;
+  updatePendingMemberPhone: (memberId: string, phone: string) => Promise<{ error: string | null }>;
+  cancelPendingMember: (memberId: string) => Promise<{ error: string | null }>;
 }
 
 export const LoopContext = createContext<LoopContextValue | null>(null);

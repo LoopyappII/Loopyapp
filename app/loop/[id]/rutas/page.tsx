@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { LogIn, LogOut as LogOutIcon, Gauge, X } from "lucide-react";
 import type { MapMember, MapRoute, MapZone } from "@/components/LiveMap";
 import { useLoop } from "../LoopContext";
+import { getMemberGradient } from "@/lib/memberColors";
 
 const ROUTE_COLOR = "#ec6fc9";
 
@@ -109,26 +110,34 @@ export default function RutasPage() {
 
       <div className="bg-white border-t border-loopy-100 rounded-t-2xl -mt-4 relative z-10 p-4 md:p-6 shadow-[0_-8px_28px_rgba(35,42,82,0.10)] space-y-4">
         <div className="flex gap-3 overflow-x-auto pb-1">
-          {members.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => toggleRoute(m.user_id)}
-              className="flex flex-col items-center gap-1 shrink-0"
-              title={`Ver recorrido de ${m.profiles?.name || "miembro"}`}
-            >
-              <span
-                className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm ${
-                  routeUserId === m.user_id ? "ring-2 ring-glow-500 ring-offset-2" : ""
-                }`}
-                style={{ backgroundColor: m.user_id === routeUserId ? "#ec6fc9" : "#5b6fc4" }}
+          {members
+            .filter((m) => m.user_id)
+            .map((m) => (
+              <button
+                key={m.id}
+                onClick={() => toggleRoute(m.user_id as string)}
+                className="flex flex-col items-center gap-1 shrink-0"
+                title={`Ver recorrido de ${m.profiles?.name || "miembro"}`}
               >
-                {(m.profiles?.name || "?").charAt(0).toUpperCase()}
-              </span>
-              <span className="text-[11px] text-loopy-700 max-w-[56px] truncate">
-                {m.profiles?.name || "Miembro"}
-              </span>
-            </button>
-          ))}
+                <span
+                  className={`w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                    routeUserId === m.user_id ? "ring-2 ring-glow-500 ring-offset-2" : ""
+                  }`}
+                  style={{
+                    background: m.member_color
+                      ? getMemberGradient(m.member_color)
+                      : m.user_id === routeUserId
+                      ? "#ec6fc9"
+                      : "#5b6fc4",
+                  }}
+                >
+                  {(m.profiles?.name || "?").charAt(0).toUpperCase()}
+                </span>
+                <span className="text-[11px] text-loopy-700 max-w-[56px] truncate">
+                  {m.profiles?.name || "Miembro"}
+                </span>
+              </button>
+            ))}
         </div>
 
         <div>
