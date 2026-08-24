@@ -27,11 +27,16 @@ const stamp = Date.now();
 const USER1 = { email: `qa.loopy1.${stamp}@mailinator.com`, name: "QA Uno" };
 const USER2 = { email: `qa.loopy2.${stamp}@mailinator.com`, name: "QA Dos" };
 
-const SUPABASE_URL = "https://xumacwfsabojqefhaozm.supabase.co";
+// Read from the same env vars lib/supabaseClient.ts:7-13 already exposes
+// (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY), falling back to
+// the same literal defaults it uses, so a future staging project just needs
+// those env vars set rather than an edit to this test file.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://xumacwfsabojqefhaozm.supabase.co";
 // Public by design (see the comment above supabaseUrl/supabaseAnonKey in
 // lib/supabaseClient.ts) — this is the same anon key already shipped in
 // every browser bundle of this app, not a secret being duplicated here.
 const SUPABASE_ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1bWFjd2ZzYWJvanFlZmhhb3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzODE2ODYsImV4cCI6MjA5OTk1NzY4Nn0.kP9gxcslcBRcRuwilR8KzGbO_YeOzZFilU4Op1k8mzQ";
 // supabase-js's default localStorage session key is
 // `sb-<url-hostname-first-label>-auth-token` (confirmed against the
@@ -237,6 +242,10 @@ async function grantGeo(context: BrowserContext, lat: number, lng: number) {
   await context.setGeolocation({ latitude: lat, longitude: lng });
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ browser }) => {
   const ctx1 = await browser.newContext();
   const ctx2 = await browser.newContext();
@@ -282,7 +291,12 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
     const inviteCode = linkText.match(/Código:\s*(\S+)/)?.[1];
     expect(inviteCode).toBeTruthy();
 
-    await loopLink1.click();
+    // Enter via the bare loop id (not the dashboard link, whose href already
+    // points straight at /mapa) so app/loop/[id]/page.tsx's redirect to
+    // /mapa actually runs at least once (Finding 7 item 1: this redirect had
+    // zero coverage before, since every other entry point in this suite
+    // targets a sub-path directly).
+    await page1.goto(`/loop/${loopId}`);
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
     // user2 joins with the invite code — same "no auto-navigate" behavior.
@@ -294,12 +308,77 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
     await loopLink2.click();
     await expect(page2).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
-    // Tab navigation preserves loop id and doesn't get stuck loading.
-    for (const tab of ["familia", "rutas", "sos", "mapa"]) {
-      await page1.goto(`/loop/${loopId}/${tab}`);
-      await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/${tab}$`));
+    // Tab navigation preserves loop id, doesn't get stuck loading, and each
+    // tab renders real content rather than a blank/errored shell (Finding
+    // 5). Driven by actually clicking BottomTabBar's links (not page.goto),
+    // so this can tell "the shared layout persists across tab switches"
+    // (the whole point of this refactor) apart from "the layout remounts on
+    // every switch" (silent Realtime subscription churn) — both would pass
+    // if every check just used goto (Finding 4). page1 is on /mapa here.
+    const tabChecks: Array<{ name: string; path: string; heading: string }> = [
+      { name: "Familia", path: "familia", heading: "Miembros" },
+      { name: "Rutas", path: "rutas", heading: "Historial" },
+      { name: "SOS", path: "sos", heading: "Botón SOS" },
+      { name: "Mapa", path: "mapa", heading: "Tu familia" },
+    ];
+    for (const { name, path, heading } of tabChecks) {
+      await page1.getByRole("link", { name, exact: true }).click();
+      await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/${path}$`), { timeout: 10000 });
       await expect(page1.locator("text=Cargando Loopy...")).toHaveCount(0);
+      await expect(page1.getByRole("heading", { name: heading })).toBeVisible();
     }
+
+    // Cheapest high-value cross-tab flow (Finding 4): toggle a member's route
+    // on Familia, then land on Mapa via BottomTabBar's link (not goto) and
+    // confirm the route indicator chip appears there. This proves client-
+    // side nav, that BottomTabBar's links work, that the routeUserId state
+    // set on one tab survived the switch to another (it lives in the shared
+    // LoopContext from app/loop/[id]/layout.tsx, not per-page state), and
+    // exercises the shared Realtime-fed data (routePoints) across that
+    // switch — page1 is on /mapa after the loop above.
+    await page1.getByRole("link", { name: "Familia", exact: true }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
+    const routeToggle = page1.getByRole("button", { name: /^Ver recorrido de /i }).first();
+    const toggleLabel = (await routeToggle.getAttribute("aria-label")) ?? "";
+    const routeMemberName = toggleLabel.replace(/^Ver recorrido de /i, "").trim();
+    expect(routeMemberName, "route-toggle button should carry a member name").toBeTruthy();
+    await routeToggle.click();
+    // toggleRoute() (LoopContext.tsx) itself calls router.push to /mapa the
+    // moment a route is turned on, so this click may already be a no-op by
+    // the time it runs — it's kept anyway so BottomTabBar's "Mapa" link is
+    // itself exercised on this flow too, not just proven-by-side-effect.
+    await page1.getByRole("link", { name: "Mapa", exact: true }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa$`), { timeout: 10000 });
+    const routeChip = page1.locator("div.absolute.top-3.left-3");
+    await expect(routeChip).toBeVisible({ timeout: 10000 });
+    // Case-insensitive: familia/page.tsx's aria-label fallback is "miembro"
+    // while mapa/page.tsx's chip fallback is "Miembro" — both fire only if
+    // profiles.name is missing, but matching case-insensitively keeps this
+    // assertion correct either way instead of coupling it to that casing.
+    await expect(routeChip).toContainText(new RegExp(escapeRegExp(routeMemberName), "i"));
+
+    // Ajustes settings persistence (Finding 7 item 2): as the admin (user1,
+    // who created the Loopy), save settings and confirm they read back from
+    // Supabase after a full reload — exercises saveLoopSettings
+    // (LoopContext.tsx) end to end, which Task 10 built and nothing in this
+    // suite previously covered.
+    await page1.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    const speedInput = page1.getByPlaceholder("Ej. 120");
+    const emergencyInput = page1.getByPlaceholder("Ej. 911");
+    await speedInput.fill("80");
+    await emergencyInput.fill("112");
+    const [settingsRes] = await Promise.all([
+      page1.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      page1.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(settingsRes.ok(), "saveLoopSettings PATCH should succeed").toBeTruthy();
+
+    await page1.reload();
+    await expect(page1.getByPlaceholder("Ej. 120")).toHaveValue("80", { timeout: 10000 });
+    await expect(page1.getByPlaceholder("Ej. 911")).toHaveValue("112");
 
     // SOS fires while page2 is on a non-SOS, non-Mapa tab (familia) — this
     // is the assertion proving the sos_alerts Realtime subscription lives
