@@ -209,11 +209,11 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
  * `.pressSequentially()` sends real per-character key events instead, which
  * this library needs.
  */
-async function signUpAndLogin(page: Page, email: string, name: string) {
+async function signUpAndLogin(page: Page, email: string, name: string, phone: string = "+34600000000") {
   await page.goto("/signup");
   const form = page.locator("form");
   await form.locator("input").first().fill(name); // Nombre: no placeholder/label-for
-  await page.locator('input[type="tel"]').pressSequentially("+34600000000", { delay: 20 });
+  await page.locator('input[type="tel"]').pressSequentially(phone, { delay: 20 });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
@@ -400,6 +400,94 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
     // are usable) before closing anything, and its own failures are
     // swallowed here so they can never override/mask the test's real
     // outcome from the try block above.
+    if (loopId) {
+      await cleanupTestData(page1, page2, loopId).catch((err) => {
+        console.warn(
+          `[e2e cleanup] best-effort cleanup failed (non-fatal): ${
+            err instanceof Error ? err.message : err
+          }`
+        );
+      });
+    }
+    await ctx1.close().catch(() => {});
+    await ctx2.close().catch(() => {});
+  }
+});
+
+test("familia: admin adds pending member by phone, auto-links on matching signup", async ({ browser }) => {
+  const ctx1 = await browser.newContext();
+  await ctx1.addInitScript(() => localStorage.setItem("loopy-cookie-consent", "accepted"));
+  const page1 = await ctx1.newPage();
+  await grantGeo(ctx1, 40.4168, -3.7038);
+
+  const ctx2 = await browser.newContext();
+  await ctx2.addInitScript(() => localStorage.setItem("loopy-cookie-consent", "accepted"));
+  const page2 = await ctx2.newPage();
+  await grantGeo(ctx2, 40.417, -3.704);
+
+  const USER3 = { email: `qa.loopy3.${stamp}@mailinator.com`, name: "QA Auto" };
+  const AUTO_LINK_PHONE = "+34611222333";
+
+  let loopId: string | undefined;
+
+  try {
+    await signUpAndLogin(page1, `qa.loopy1b.${stamp}@mailinator.com`, "QA Admin Familia");
+
+    const loopName = `QA Familia ${stamp}`;
+    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
+    await page1.getByRole("button", { name: "Crear Loopy" }).click();
+    const loopLink = page1.locator("a", { hasText: loopName });
+    await expect(loopLink).toBeVisible({ timeout: 10000 });
+    const href = await loopLink.getAttribute("href");
+    loopId = href?.match(/\/loop\/([^/]+)\//)?.[1];
+    expect(loopId).toBeTruthy();
+    await loopLink.click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
+
+    await page1.getByRole("link", { name: "Familia", exact: true }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
+
+    // Pending member used only to exercise edit/cancel — never actually signed up.
+    await page1.getByRole("button", { name: "Agregar miembro" }).click();
+    await page1.locator('input[placeholder="Nombre"]').fill("QA Invitado");
+    await page1.locator('input[type="tel"]').pressSequentially("+34699999998", { delay: 20 });
+    await page1.getByRole("button", { name: "Agregar", exact: true }).click();
+    await expect(page1.getByText("QA Invitado")).toBeVisible({ timeout: 10000 });
+    await expect(page1.getByText("Invitado", { exact: true })).toBeVisible();
+
+    // Not shown on Mapa or Rutas — those only list joined (real) members.
+    await page1.getByRole("link", { name: "Mapa", exact: true }).click();
+    await expect(page1.getByText("QA Invitado")).toHaveCount(0);
+    await page1.getByRole("link", { name: "Rutas", exact: true }).click();
+    await expect(page1.getByText("QA Invitado")).toHaveCount(0);
+    await page1.getByRole("link", { name: "Familia", exact: true }).click();
+
+    // Edit the pending phone, then cancel the invitation.
+    await page1.getByRole("button", { name: "Editar teléfono de QA Invitado" }).click();
+    await page1.locator('input[type="tel"]').fill("");
+    await page1.locator('input[type="tel"]').pressSequentially("+34699999997", { delay: 20 });
+    await page1.getByRole("button", { name: "Guardar teléfono" }).click();
+    await expect(page1.getByText("+34699999997")).toBeVisible({ timeout: 10000 });
+
+    await page1.getByRole("button", { name: "Cancelar invitación de QA Invitado" }).click();
+    await expect(page1.getByText("QA Invitado")).toHaveCount(0, { timeout: 10000 });
+
+    // Real auto-link: add a second pending member with the phone USER3 will
+    // sign up with, then have USER3 actually sign up. No manual join step —
+    // the Postgres trigger (see the spec's SQL) does the linking.
+    await page1.getByRole("button", { name: "Agregar miembro" }).click();
+    await page1.locator('input[placeholder="Nombre"]').fill("QA Auto Placeholder");
+    await page1.locator('input[type="tel"]').pressSequentially(AUTO_LINK_PHONE, { delay: 20 });
+    await page1.getByRole("button", { name: "Agregar", exact: true }).click();
+    await expect(page1.getByText("QA Auto Placeholder")).toBeVisible({ timeout: 10000 });
+
+    await signUpAndLogin(page2, USER3.email, USER3.name, AUTO_LINK_PHONE);
+    await expect(page2.locator("a", { hasText: loopName })).toBeVisible({ timeout: 15000 });
+
+    await page1.reload();
+    await expect(page1.getByText(USER3.name)).toBeVisible({ timeout: 10000 });
+    await expect(page1.getByText("QA Auto Placeholder")).toHaveCount(0);
+  } finally {
     if (loopId) {
       await cleanupTestData(page1, page2, loopId).catch((err) => {
         console.warn(
