@@ -8,3 +8,7 @@ next-env.d.ts
 .vercel
 .claude/
 tsconfig.tsbuildinfo
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

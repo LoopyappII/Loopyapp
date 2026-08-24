@@ -9,10 +9,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const COOKIE_CONSENT_KEY = "loopy-cookie-consent";
 
 export default function CookieConsent() {
+  const pathname = usePathname();
+  // /loop/[id]/* routes render BottomTabBar (components/loop/BottomTabBar.tsx)
+  // sticky at the bottom of the shell at z-20, below this banner's z-50 — so
+  // a first-time visitor on those routes would have primary navigation
+  // completely hidden under this banner until they accept/reject. Same fix
+  // philosophy as SupportChat.tsx (applied in the other direction: instead
+  // of moving a small bubble up, move this full-width banner up so it sits
+  // above the tab bar instead of covering it).
+  const isLoopRoute = pathname?.startsWith("/loop/") ?? false;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -30,10 +40,16 @@ export default function CookieConsent() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-loopy-900 text-white shadow-[0_-8px_28px_rgba(35,42,82,0.25)]">
+    <div
+      className={`fixed left-0 right-0 z-50 bg-loopy-900 text-white shadow-[0_-8px_28px_rgba(35,42,82,0.25)] ${
+        isLoopRoute ? "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]" : "bottom-0"
+      }`}
+    >
       {/* sm:pr-20 deja hueco para la burbuja fija de SupportChat (bottom-4
           right-4, ~56px) entre sm y lg, único rango donde este banner pasa
-          a fila y sus botones quedan pegados al borde derecho. */}
+          a fila y sus botones quedan pegados al borde derecho. En rutas
+          /loop/ ambas (banner y burbuja) ya se desplazan hacia arriba para
+          no tapar BottomTabBar, así que este caso no aplica ahí. */}
       <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 sm:pr-20 lg:pr-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/90 leading-relaxed">
           Usamos cookies esenciales para que el inicio de sesión funcione

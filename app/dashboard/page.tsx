@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
   return (
     <main className="relative min-h-screen">
-      <div className="relative z-10 px-6 py-8 max-w-3xl mx-auto">
+      <div className="relative z-10 px-6 py-8 max-w-md mx-auto">
         <div className="flex items-center justify-between mb-8">
           <NavbarLogo size={32} dark />
           <button
@@ -174,7 +174,7 @@ export default function DashboardPage() {
             {loops.map((loop) => (
               <motion.li key={loop.id} variants={fadeInUp}>
                 <Link
-                  href={`/loop/${loop.id}`}
+                  href={`/loop/${loop.id}/mapa`}
                   className="block bg-white rounded-xl border border-loopy-100 shadow-card p-4 hover:border-bridge/40 hover:shadow-card-hover transition-all"
                 >
                   <div className="flex items-center justify-between">
@@ -198,7 +198,7 @@ export default function DashboardPage() {
           <p className="text-red-600 text-sm mb-4">{formError}</p>
         )}
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-6">
           <form
             onSubmit={handleCreateLoop}
             className="bg-white rounded-2xl border border-loopy-100 shadow-card p-6"
