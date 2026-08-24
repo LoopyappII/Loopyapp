@@ -32,7 +32,7 @@ export default function ZonasPage() {
         Mapa
       </Link>
 
-      <form onSubmit={handleAddZone} className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
+      <form onSubmit={handleAddZone} className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
         <h2 className="font-bold text-loopy-900 mb-2 flex items-center gap-1.5">
           <MapPin size={16} className="text-bridge" />
           Nueva zona segura
@@ -64,7 +64,7 @@ export default function ZonasPage() {
         </button>
       </form>
 
-      <div className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
+      <div className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
         <h2 className="font-bold text-loopy-900 mb-2">Zonas seguras</h2>
         {zones.length === 0 ? (
           <p className="text-sm text-loopy-700/70">Todavía no hay zonas creadas.</p>

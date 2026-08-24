@@ -7,6 +7,7 @@ export default function AjustesPage() {
   const { loop, isAdmin, saveLoopSettings } = useLoop();
   const [speedLimitInput, setSpeedLimitInput] = useState(loop.speed_limit_kmh?.toString() || "");
   const [emergencyNumberInput, setEmergencyNumberInput] = useState(loop.emergency_number || "");
+  const [primaryContactInput, setPrimaryContactInput] = useState(loop.primary_contact_number || "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -16,7 +17,8 @@ export default function AjustesPage() {
     setError(null);
     const { error } = await saveLoopSettings(
       speedLimitInput ? Number(speedLimitInput) : null,
-      emergencyNumberInput || null
+      emergencyNumberInput || null,
+      primaryContactInput || null
     );
     if (error) setError(error);
     setSaving(false);
@@ -24,7 +26,7 @@ export default function AjustesPage() {
 
   return (
     <div className="flex-1 p-4 space-y-4">
-      <div className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
+      <div className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
         <h2 className="font-bold text-loopy-900 mb-1">{loop.name}</h2>
         <p className="text-xs text-loopy-700/70">
           {loop.mode === "mirror" ? "Modo Espejo" : "Modo Supervisión"} · Código: {loop.invite_code}
@@ -32,7 +34,7 @@ export default function AjustesPage() {
       </div>
 
       {isAdmin ? (
-        <form onSubmit={handleSave} className="bg-white rounded-xl border border-loopy-100 shadow-card p-4">
+        <form onSubmit={handleSave} className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
           <h2 className="font-bold text-loopy-900 mb-2">Configuración del Loopy</h2>
           <label className="block text-xs text-loopy-700/70 mb-1">Límite de velocidad (km/h)</label>
           <input
@@ -51,11 +53,19 @@ export default function AjustesPage() {
             value={emergencyNumberInput}
             onChange={(e) => setEmergencyNumberInput(e.target.value)}
           />
+          <label className="block text-xs text-loopy-700/70 mb-1">Número de primer contacto</label>
+          <input
+            type="tel"
+            placeholder="Ej. mamá o papá"
+            className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
+            value={primaryContactInput}
+            onChange={(e) => setPrimaryContactInput(e.target.value)}
+          />
           {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-2 rounded-full bg-loopy-900 text-white text-sm font-semibold shadow-[0_8px_24px_rgba(35,42,82,0.35)] hover:shadow-[0_10px_32px_rgba(35,42,82,0.5)] disabled:opacity-60"
+            className="w-full py-2 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white text-sm font-semibold shadow-cta hover:shadow-cta-hover disabled:opacity-60"
           >
             {saving ? "Guardando..." : "Guardar"}
           </button>
