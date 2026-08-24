@@ -1,9 +1,123 @@
 import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 
+/**
+ * NOT SUITABLE FOR A TIGHT/FREQUENT CI LOOP AS-IS.
+ *
+ * This suite does real signups against this app's live Supabase project
+ * (lib/supabaseClient.ts hardcodes the project URL; this worktree has no
+ * .env.local override), and that project's "Confirm email" setting is ON
+ * with no custom SMTP configured — so each signup has to round-trip
+ * through a real confirmation email fetched from mailinator.com's public
+ * inbox API (see confirmEmailViaMailinator below). Observed happy-path
+ * time is 1.2-2.9 minutes; under repeated back-to-back runs, Supabase's
+ * built-in email service has been observed backing off to ~2 minutes
+ * before delivering, hence playwright.config.ts's 420s test timeout.
+ *
+ * Before wiring this into a CI pipeline that runs often: either configure
+ * a custom SMTP provider on the Supabase project (removes the aggressive
+ * default rate limiting) or add a test-only way to bypass/skip email
+ * confirmation. Until then, expect this test to be slow and occasionally
+ * flaky under concurrent/frequent execution — that's a live-email-
+ * dependency characteristic of the environment, not a bug in the nav
+ * shell this suite is testing.
+ */
+
 const PASSWORD = "LoopyQA!2026";
 const stamp = Date.now();
 const USER1 = { email: `qa.loopy1.${stamp}@mailinator.com`, name: "QA Uno" };
 const USER2 = { email: `qa.loopy2.${stamp}@mailinator.com`, name: "QA Dos" };
+
+const SUPABASE_URL = "https://xumacwfsabojqefhaozm.supabase.co";
+// Public by design (see the comment above supabaseUrl/supabaseAnonKey in
+// lib/supabaseClient.ts) — this is the same anon key already shipped in
+// every browser bundle of this app, not a secret being duplicated here.
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1bWFjd2ZzYWJvanFlZmhhb3ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzODE2ODYsImV4cCI6MjA5OTk1NzY4Nn0.kP9gxcslcBRcRuwilR8KzGbO_YeOzZFilU4Op1k8mzQ";
+// supabase-js's default localStorage session key is
+// `sb-<url-hostname-first-label>-auth-token` (confirmed against the
+// installed @supabase/supabase-js bundle) — derive it from SUPABASE_URL
+// instead of hardcoding a second literal that could drift out of sync.
+const SUPABASE_STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
+
+async function getAccessToken(page: Page): Promise<string | null> {
+  return page.evaluate((key) => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  }, SUPABASE_STORAGE_KEY);
+}
+
+/**
+ * Best-effort teardown of the real rows this run creates in the real,
+ * live Supabase project this app points at (see SUPABASE_URL above and
+ * lib/supabaseClient.ts — this worktree has no .env.local override, so
+ * every run of this suite writes to that same live project). Left
+ * unchecked, repeated runs accumulate junk indefinitely — this already
+ * happened while developing this test (~8-9 signup/loop-create runs
+ * during debugging).
+ *
+ * Deletes are attempted as BOTH users, each authenticated with their own
+ * session token (read from that user's own browser localStorage — no
+ * service-role key involved). RLS policies here aren't visible from a
+ * plain client, and likely scope some deletes to "rows I created" (e.g.
+ * each user's own `locations`/`sos_alerts` rows) rather than "any row in
+ * a loop I admin" — attempting as both users is the closest a plain
+ * client can get to full coverage without knowing the exact policies.
+ * `loop_members`/`loops` are deleted last so an RLS policy that keys off
+ * "am I still a member of this loop" isn't undermined mid-cleanup. No
+ * assumption is made about `ON DELETE CASCADE` being configured on these
+ * tables' `loop_id` columns — deleting a table with nothing left to
+ * delete is simply a no-op.
+ *
+ * Every delete is independently try/caught (a row blocked by RLS, or
+ * already gone, is not treated as a failure), and this whole function is
+ * awaited with a top-level `.catch()` at its call site — a cleanup
+ * problem here can never mask the test's actual pass/fail result.
+ *
+ * KNOWN LIMITATION: this cannot delete the two Auth users themselves.
+ * `supabase.auth.admin.deleteUser` requires a service-role key, which is
+ * correctly unavailable to a plain client (and shouldn't be added just
+ * for this suite). The two `qa.loopy{1,2}.<timestamp>@mailinator.com`
+ * accounts each run creates are left behind in `auth.users`. A periodic
+ * service-role cleanup script/cron job (e.g. delete `auth.users` rows
+ * where `email like 'qa.loopy%@mailinator.com'` and `created_at` is old)
+ * is a reasonable follow-up, outside this task's scope.
+ */
+async function cleanupTestData(page1: Page, page2: Page, loopId: string) {
+  const dependentTables = ["sos_alerts", "speed_alerts", "locations", "safe_zones"];
+
+  async function deleteFromAs(page: Page, table: string, filter: string) {
+    const token = await getAccessToken(page);
+    if (!token) return;
+    try {
+      const res = await page.request.delete(`${SUPABASE_URL}/rest/v1/${table}?${filter}`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok()) {
+        console.warn(`[e2e cleanup] DELETE ${table} (${filter}): HTTP ${res.status()}`);
+      }
+    } catch (err) {
+      console.warn(`[e2e cleanup] DELETE ${table} (${filter}) threw: ${err}`);
+    }
+  }
+
+  for (const page of [page1, page2]) {
+    for (const table of dependentTables) {
+      await deleteFromAs(page, table, `loop_id=eq.${loopId}`);
+    }
+  }
+  for (const page of [page1, page2]) {
+    await deleteFromAs(page, "loop_members", `loop_id=eq.${loopId}`);
+  }
+  // Only user1 (the admin who created it) is expected to be able to
+  // delete the loops row itself.
+  await deleteFromAs(page1, "loops", `id=eq.${loopId}`);
+}
 
 /**
  * This Supabase project has "Confirm email" ON (verified directly against
@@ -142,61 +256,81 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
   await grantGeo(ctx1, 40.4168, -3.7038);
   await grantGeo(ctx2, 40.417, -3.704);
 
-  await signUpAndLogin(page1, USER1.email, USER1.name);
-  await signUpAndLogin(page2, USER2.email, USER2.name);
+  // Tracked so the `finally` block below can attempt cleanupTestData()
+  // even if an assertion throws partway through.
+  let loopId: string | undefined;
 
-  // Create a Loopy from user1's dashboard. Creating does NOT auto-navigate
-  // (app/dashboard/page.tsx's handleCreateLoop only inserts + reloads the
-  // list) — the new Loopy shows up as a link in "Tus Loopys" that we then
-  // click ourselves.
-  const loopName = `QA Shell ${stamp}`;
-  await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-  await page1.getByRole("button", { name: "Crear Loopy" }).click();
+  try {
+    await signUpAndLogin(page1, USER1.email, USER1.name);
+    await signUpAndLogin(page2, USER2.email, USER2.name);
 
-  const loopLink1 = page1.locator("a", { hasText: loopName });
-  await expect(loopLink1).toBeVisible({ timeout: 10000 });
-  const href = await loopLink1.getAttribute("href");
-  const loopId = href?.match(/\/loop\/([^/]+)\//)?.[1];
-  expect(loopId).toBeTruthy();
+    // Create a Loopy from user1's dashboard. Creating does NOT auto-navigate
+    // (app/dashboard/page.tsx's handleCreateLoop only inserts + reloads the
+    // list) — the new Loopy shows up as a link in "Tus Loopys" that we then
+    // click ourselves.
+    const loopName = `QA Shell ${stamp}`;
+    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
+    await page1.getByRole("button", { name: "Crear Loopy" }).click();
 
-  const linkText = await loopLink1.innerText();
-  const inviteCode = linkText.match(/Código:\s*(\S+)/)?.[1];
-  expect(inviteCode).toBeTruthy();
+    const loopLink1 = page1.locator("a", { hasText: loopName });
+    await expect(loopLink1).toBeVisible({ timeout: 10000 });
+    const href = await loopLink1.getAttribute("href");
+    loopId = href?.match(/\/loop\/([^/]+)\//)?.[1];
+    expect(loopId).toBeTruthy();
 
-  await loopLink1.click();
-  await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
+    const linkText = await loopLink1.innerText();
+    const inviteCode = linkText.match(/Código:\s*(\S+)/)?.[1];
+    expect(inviteCode).toBeTruthy();
 
-  // user2 joins with the invite code — same "no auto-navigate" behavior.
-  await page2.getByPlaceholder(/código de invitación/i).fill(inviteCode!);
-  await page2.getByRole("button", { name: "Unirme" }).click();
+    await loopLink1.click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
-  const loopLink2 = page2.locator("a", { hasText: loopName });
-  await expect(loopLink2).toBeVisible({ timeout: 10000 });
-  await loopLink2.click();
-  await expect(page2).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
+    // user2 joins with the invite code — same "no auto-navigate" behavior.
+    await page2.getByPlaceholder(/código de invitación/i).fill(inviteCode!);
+    await page2.getByRole("button", { name: "Unirme" }).click();
 
-  // Tab navigation preserves loop id and doesn't get stuck loading.
-  for (const tab of ["familia", "rutas", "sos", "mapa"]) {
-    await page1.goto(`/loop/${loopId}/${tab}`);
-    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/${tab}$`));
-    await expect(page1.locator("text=Cargando Loopy...")).toHaveCount(0);
+    const loopLink2 = page2.locator("a", { hasText: loopName });
+    await expect(loopLink2).toBeVisible({ timeout: 10000 });
+    await loopLink2.click();
+    await expect(page2).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
+
+    // Tab navigation preserves loop id and doesn't get stuck loading.
+    for (const tab of ["familia", "rutas", "sos", "mapa"]) {
+      await page1.goto(`/loop/${loopId}/${tab}`);
+      await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/${tab}$`));
+      await expect(page1.locator("text=Cargando Loopy...")).toHaveCount(0);
+    }
+
+    // SOS fires while page2 is on a non-SOS, non-Mapa tab (familia) — this
+    // is the assertion proving the sos_alerts Realtime subscription lives
+    // in the shared layout, not in the /sos page, and survives tab
+    // navigation.
+    await page2.goto(`/loop/${loopId}/familia`);
+    await page1.goto(`/loop/${loopId}/sos`);
+    const sosButton = page1.getByRole("button", { name: /mantén presionado/i });
+    await expect(sosButton).toBeVisible();
+    const box = await sosButton.boundingBox();
+    await page1.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page1.mouse.down();
+    await page1.waitForTimeout(1400); // hold threshold is 1200ms (sos/page.tsx)
+    await page1.mouse.up();
+
+    await expect(page2.locator("text=necesita ayuda")).toBeVisible({ timeout: 10000 });
+  } finally {
+    // Cleanup runs (with the pages/contexts still open, so their sessions
+    // are usable) before closing anything, and its own failures are
+    // swallowed here so they can never override/mask the test's real
+    // outcome from the try block above.
+    if (loopId) {
+      await cleanupTestData(page1, page2, loopId).catch((err) => {
+        console.warn(
+          `[e2e cleanup] best-effort cleanup failed (non-fatal): ${
+            err instanceof Error ? err.message : err
+          }`
+        );
+      });
+    }
+    await ctx1.close().catch(() => {});
+    await ctx2.close().catch(() => {});
   }
-
-  // SOS fires while page2 is on a non-SOS, non-Mapa tab (familia) — this is
-  // the assertion proving the sos_alerts Realtime subscription lives in the
-  // shared layout, not in the /sos page, and survives tab navigation.
-  await page2.goto(`/loop/${loopId}/familia`);
-  await page1.goto(`/loop/${loopId}/sos`);
-  const sosButton = page1.getByRole("button", { name: /mantén presionado/i });
-  await expect(sosButton).toBeVisible();
-  const box = await sosButton.boundingBox();
-  await page1.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
-  await page1.mouse.down();
-  await page1.waitForTimeout(1400); // hold threshold is 1200ms (sos/page.tsx)
-  await page1.mouse.up();
-
-  await expect(page2.locator("text=necesita ayuda")).toBeVisible({ timeout: 10000 });
-
-  await ctx1.close();
-  await ctx2.close();
 });
