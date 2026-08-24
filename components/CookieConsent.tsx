@@ -31,7 +31,10 @@ export default function CookieConsent() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-loopy-900 text-white shadow-[0_-8px_28px_rgba(35,42,82,0.25)]">
-      <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* sm:pr-20 deja hueco para la burbuja fija de SupportChat (bottom-4
+          right-4, ~56px) entre sm y lg, único rango donde este banner pasa
+          a fila y sus botones quedan pegados al borde derecho. */}
+      <div className="max-w-5xl mx-auto px-4 py-4 sm:px-6 sm:py-5 sm:pr-20 lg:pr-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/90 leading-relaxed">
           Usamos cookies esenciales para que el inicio de sesión funcione
           correctamente, y una cookie opcional para recordar el idioma de
