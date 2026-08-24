@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { haversineMeters } from "@/lib/geo";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import type { MapMember } from "@/components/LiveMap";
-import type { Loop, LoopMember, SafeZone, SpeedAlert } from "@/lib/types";
+import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert } from "@/lib/types";
 import BottomTabBar from "@/components/loop/BottomTabBar";
 import { LoopContext, type LoopContextValue, type ZoneEventRow } from "./LoopContext";
 
@@ -322,6 +322,62 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     return { error: null };
   }
 
+  async function addPendingMember(
+    name: string,
+    phone: string,
+    colorSlug: string,
+    role: MemberRole
+  ): Promise<{ error: string | null }> {
+    const alreadyExists = members.some(
+      (m) => m.pending_phone === phone || m.profiles?.phone === phone
+    );
+    if (alreadyExists) {
+      return { error: "Ese teléfono ya es miembro de este Loopy." };
+    }
+    const { data, error } = await supabase
+      .from("loop_members")
+      .insert({
+        loop_id: loopId,
+        user_id: null,
+        role,
+        pending_name: name,
+        pending_phone: phone,
+        member_color: colorSlug,
+      })
+      .select()
+      .single();
+    if (error || !data) return { error: error?.message || "No se pudo agregar el miembro" };
+    setMembers((prev) => [...prev, data as LoopMember]);
+    return { error: null };
+  }
+
+  async function updatePendingMemberPhone(
+    memberId: string,
+    phone: string
+  ): Promise<{ error: string | null }> {
+    const { data, error } = await supabase
+      .from("loop_members")
+      .update({ pending_phone: phone })
+      .eq("id", memberId)
+      .is("user_id", null)
+      .select()
+      .single();
+    if (error || !data) return { error: error?.message || "No se pudo actualizar el teléfono" };
+    setMembers((prev) => prev.map((m) => (m.id === memberId ? { ...m, pending_phone: phone } : m)));
+    return { error: null };
+  }
+
+  async function cancelPendingMember(memberId: string): Promise<{ error: string | null }> {
+    const { error } = await supabase
+      .from("loop_members")
+      .delete()
+      .eq("id", memberId)
+      .is("user_id", null);
+    if (error) return { error: error.message };
+    setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    return { error: null };
+  }
+
   function toggleRoute(uid: string) {
     if (routeUserId === uid) {
       setRouteUserId(null);
@@ -377,6 +433,9 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     addZone,
     saveAge,
     saveLoopSettings,
+    addPendingMember,
+    updatePendingMemberPhone,
+    cancelPendingMember,
   };
 
   return (
