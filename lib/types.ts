@@ -24,8 +24,11 @@ export interface Loop {
 export interface LoopMember {
   id: string;
   loop_id: string;
-  user_id: string;
+  user_id: string | null;
   role: MemberRole;
+  pending_name: string | null;
+  pending_phone: string | null;
+  member_color: string | null;
   profiles?: Profile;
 }
 
