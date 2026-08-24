@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send } from "lucide-react";
 
@@ -98,6 +99,14 @@ interface Msg {
 }
 
 export default function SupportChat() {
+  const pathname = usePathname();
+  // /loop/[id]/* routes render BottomTabBar (components/loop/BottomTabBar.tsx),
+  // sticky at the bottom of a max-w-md phone-width shell. This bubble is
+  // fixed bottom-4 right-4 with a much higher z-index, so on that route
+  // family it sits directly on top of the tab bar's rightmost (SOS) tab.
+  // Shift it up to clear the tab bar's height + safe-area inset there;
+  // every other route keeps the original bottom-4.
+  const isLoopRoute = pathname?.startsWith("/loop/") ?? false;
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
     {
@@ -146,7 +155,11 @@ export default function SupportChat() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col items-end">
+    <div
+      className={`fixed ${
+        isLoopRoute ? "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]" : "bottom-4"
+      } right-4 z-[9999] flex flex-col items-end`}
+    >
       <AnimatePresence>
         {open && (
           <motion.div
