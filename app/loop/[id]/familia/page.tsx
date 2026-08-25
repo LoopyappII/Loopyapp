@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Route as RouteIcon, UserPlus, Pencil, X, Check } from "lucide-react";
+import { Route as RouteIcon, UserPlus, Pencil, X, Check, Copy } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useLoop, roleLabel } from "../LoopContext";
@@ -33,6 +33,20 @@ export default function FamiliaPage() {
 
   const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
   const [editPhoneValue, setEditPhoneValue] = useState("");
+
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+
+  async function handleCopyInviteCode() {
+    try {
+      await navigator.clipboard.writeText(loop.invite_code);
+      setCodeCopied(true);
+      setCopyError(false);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch {
+      setCopyError(true);
+    }
+  }
 
   async function handleSaveAge(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +86,39 @@ export default function FamiliaPage() {
 
   return (
     <div className="flex-1 p-4 space-y-4">
+      {isAdmin && members.length <= 1 && (
+        <div className="bg-gradient-to-br from-loopy-50 to-bridge/10 border border-bridge/20 rounded-xl p-4 md:p-6">
+          <h2 className="font-bold text-loopy-900 mb-1.5">Sumá a tu familia</h2>
+          <p className="text-sm text-loopy-700 mb-4">
+            Agregalos por su número de teléfono: en cuanto se registren en Loopy con ese mismo número, quedan conectados automáticamente.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white text-sm font-semibold shadow-cta hover:shadow-cta-hover"
+          >
+            Agregar por teléfono
+          </button>
+          <div className="mt-4 pt-4 border-t border-bridge/15 flex items-center justify-between gap-3 flex-wrap">
+            <span className="text-xs text-loopy-700/70">
+              ¿Prefieren unirse ellos solos? Compartí este código:{" "}
+              <span className="font-mono font-semibold text-loopy-900">{loop.invite_code}</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyInviteCode}
+              className="flex items-center gap-1 text-xs font-semibold text-bridge hover:text-loopy-900 shrink-0"
+            >
+              {codeCopied ? <Check size={13} /> : <Copy size={13} />}
+              {codeCopied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          {copyError && (
+            <p className="text-red-600 text-xs mt-2">No se pudo copiar. Copialo manualmente: {loop.invite_code}</p>
+          )}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-bold text-loopy-900">Miembros</h2>
