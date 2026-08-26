@@ -75,15 +75,19 @@ export default function DashboardPage() {
       return;
     }
 
-    await supabase.from("loop_members").insert({
+    const { error: memberError } = await supabase.from("loop_members").insert({
       loop_id: loop.id,
       user_id: userId,
       role: "admin",
     });
 
-    setNewLoopName("");
-    await loadLoops(userId);
-    setCreating(false);
+    if (memberError) {
+      setFormError(memberError.message);
+      setCreating(false);
+      return;
+    }
+
+    router.push(`/loop/${loop.id}/familia`);
   }
 
   async function handleJoinLoop(e: React.FormEvent) {

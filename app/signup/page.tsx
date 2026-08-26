@@ -107,7 +107,7 @@ export default function SignupPage() {
                 Súmate a Loopy
               </h1>
               <p className="text-sm text-loopy-700 text-center mt-1">
-                Gratis los primeros 2 días, 14€/mes después.
+                Gratis el primer día, 14,99€/mes después.
               </p>
             </div>
 

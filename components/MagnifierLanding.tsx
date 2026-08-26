@@ -75,9 +75,9 @@ function LandingContent() {
               <span className="text-bridge font-bold text-sm uppercase tracking-wide">
                 Gratis
               </span>
-              <span className="text-loopy-700 text-sm">los primeros 2 días</span>
+              <span className="text-loopy-700 text-sm">el primer día</span>
               <span className="text-loopy-700/40">·</span>
-              <span className="text-loopy-900 font-extrabold text-2xl">14€</span>
+              <span className="text-loopy-900 font-extrabold text-2xl">14,99€</span>
               <span className="text-loopy-700 text-sm">/ mes después</span>
             </motion.div>
           </div>
