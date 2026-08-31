@@ -905,6 +905,10 @@ test.describe("Stripe billing", () => {
       return Stripe.webhooks.generateTestHeaderString({ payload, secret: WEBHOOK_SECRET_TEST });
     }
 
+    // NOTA: el shape acá sigue la API "Basil" de Stripe, confirmada contra
+    // el código real de app/api/stripe/webhook/route.ts (Task 2, ya
+    // aprobado) — current_period_end vive en items.data[0], no en la
+    // subscription directa como en versiones viejas de la API.
     const subscriptionEvent = {
       id: `evt_e2e_${stamp}`,
       object: "event",
@@ -916,7 +920,16 @@ test.describe("Stripe billing", () => {
           customer: fakeCustomerId,
           status: "trialing",
           trial_end: Math.floor(Date.now() / 1000) + 86400,
-          current_period_end: Math.floor(Date.now() / 1000) + 86400 * 30,
+          items: {
+            object: "list",
+            data: [
+              {
+                id: `si_e2e_${stamp}`,
+                object: "subscription_item",
+                current_period_end: Math.floor(Date.now() / 1000) + 86400 * 30,
+              },
+            ],
+          },
           metadata: { loop_id: loopId },
         },
       },
