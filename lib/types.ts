@@ -69,3 +69,27 @@ export interface SosAlert {
   lng: number;
   created_at: string;
 }
+
+export type SubscriptionStatus =
+  | "incomplete"
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled";
+
+export interface LoopSubscription {
+  loop_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
+  status: SubscriptionStatus;
+  trial_end: string | null;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const ACCESS_GRANTING_STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due"];
+
+export function hasLoopAccess(status: SubscriptionStatus | null | undefined): boolean {
+  return !!status && ACCESS_GRANTING_STATUSES.includes(status);
+}
