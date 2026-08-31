@@ -52,8 +52,14 @@ export default function SuscripcionPage({ params }: { params: { id: string } }) 
 
   const status = subscriptionStatus ?? "none";
   const copy = STATUS_COPY[status] || STATUS_COPY.none;
+  // "incomplete_expired" también va a checkout, no al portal: el portal de
+  // Stripe gestiona una suscripción existente, pero una que expiró sin
+  // completarse nunca llegó a existir del todo — no hay nada que "portal"
+  // pueda reactivar ahí, hace falta un pago nuevo.
   const action: "checkout" | "portal" =
-    status === "none" || status === "incomplete" ? "checkout" : "portal";
+    status === "none" || status === "incomplete" || status === "incomplete_expired"
+      ? "checkout"
+      : "portal";
 
   async function goToCheckoutOrPortal() {
     setLoading(true);
