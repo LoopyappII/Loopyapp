@@ -6,8 +6,11 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export async function POST(req: NextRequest) {
   const signature = req.headers.get("stripe-signature");
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!signature || !webhookSecret) {
+  if (!webhookSecret) {
     return NextResponse.json({ error: "Falta configurar el webhook" }, { status: 500 });
+  }
+  if (!signature) {
+    return NextResponse.json({ error: "Falta la firma de Stripe" }, { status: 400 });
   }
 
   const rawBody = await req.text();
@@ -25,7 +28,15 @@ export async function POST(req: NextRequest) {
     case "checkout.session.completed": {
       // Solo trae los IDs — nunca llamamos de vuelta a Stripe acá. El
       // status real llega enseguida vía customer.subscription.created
-      // (Stripe dispara ambos eventos casi simultáneamente).
+      // (Stripe dispara ambos eventos casi simultáneamente, sin orden
+      // garantizado). Por eso NO seteamos `status` acá: si
+      // subscription.created ya escribió el status real (p.ej.
+      // "trialing"), este upsert no debe pisarlo. Para el insert
+      // inicial (fila todavía no existe), la columna tiene
+      // `default 'incomplete'` en la base — Supabase/PostgREST solo
+      // actualiza en el conflicto las columnas que efectivamente
+      // enviamos, así que omitir `status` deja intacto el valor
+      // existente en vez de sobreescribirlo.
       const session = event.data.object as Stripe.Checkout.Session;
       const loopId = session.metadata?.loop_id;
       const customerId = session.customer as string | null;
@@ -36,7 +47,6 @@ export async function POST(req: NextRequest) {
             loop_id: loopId,
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
-            status: "incomplete",
             updated_at: new Date().toISOString(),
           },
           { onConflict: "loop_id" }

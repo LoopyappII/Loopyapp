@@ -18,26 +18,33 @@ export async function POST(req: NextRequest) {
   const origin = req.headers.get("origin") || "https://www.directloopy.com";
   const loopId = auth.loop.id;
 
-  const { data: existingSub } = await supabaseAdmin
-    .from("loop_subscriptions")
-    .select("stripe_customer_id")
-    .eq("loop_id", loopId)
-    .maybeSingle();
+  try {
+    const { data: existingSub } = await supabaseAdmin
+      .from("loop_subscriptions")
+      .select("stripe_customer_id")
+      .eq("loop_id", loopId)
+      .maybeSingle();
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: existingSub?.stripe_customer_id || undefined,
-    customer_email: existingSub?.stripe_customer_id ? undefined : auth.userEmail || undefined,
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: 1,
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: existingSub?.stripe_customer_id || undefined,
+      customer_email: existingSub?.stripe_customer_id ? undefined : auth.userEmail || undefined,
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: 1,
+        metadata: { loop_id: loopId },
+      },
+      client_reference_id: loopId,
       metadata: { loop_id: loopId },
-    },
-    client_reference_id: loopId,
-    metadata: { loop_id: loopId },
-    success_url: `${origin}/loop/${loopId}/familia?checkout=success`,
-    cancel_url: `${origin}/loop/${loopId}/familia?checkout=cancelled`,
-  });
+      success_url: `${origin}/loop/${loopId}/familia?checkout=success`,
+      cancel_url: `${origin}/loop/${loopId}/familia?checkout=cancelled`,
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (err) {
+    return NextResponse.json(
+      { error: `No se pudo iniciar el pago: ${(err as Error).message}` },
+      { status: 500 }
+    );
+  }
 }

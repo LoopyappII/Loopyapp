@@ -44,6 +44,17 @@ export async function requireLoopAdmin(
     .select("id, admin_id")
     .eq("id", loopId)
     .single();
+  if (loopError && loopError.code !== "PGRST116") {
+    // No es "no encontrado" (ese código específico de PostgREST) — es un
+    // problema de configuración/conectividad del servidor (p.ej.
+    // SUPABASE_SERVICE_ROLE_KEY ausente o inválida). No confundir con
+    // "Loopy no encontrado".
+    return {
+      ok: false,
+      status: 500,
+      error: "No se pudo verificar el Loopy (problema de configuración del servidor)",
+    };
+  }
   if (loopError || !loop) {
     return { ok: false, status: 404, error: "Loopy no encontrado" };
   }

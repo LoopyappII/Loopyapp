@@ -72,10 +72,13 @@ export interface SosAlert {
 
 export type SubscriptionStatus =
   | "incomplete"
+  | "incomplete_expired"
   | "trialing"
   | "active"
   | "past_due"
-  | "canceled";
+  | "canceled"
+  | "unpaid"
+  | "paused";
 
 export interface LoopSubscription {
   loop_id: string;

@@ -15,6 +15,10 @@ const STATUS_COPY: Record<SubscriptionStatus | "none", { title: string; body: st
     title: "Falta completar el pago",
     body: "El proceso de pago quedó a mitad de camino. Completalo para activar este Loopy.",
   },
+  incomplete_expired: {
+    title: "El pago no se completó a tiempo",
+    body: "El proceso de pago expiró sin completarse. Iniciá un nuevo pago para activar este Loopy.",
+  },
   trialing: {
     title: "Suscripción en período de prueba",
     body: "Todo en orden — no deberías ver esta pantalla.",
@@ -27,9 +31,17 @@ const STATUS_COPY: Record<SubscriptionStatus | "none", { title: string; body: st
     title: "Hay un problema con el cobro",
     body: "No pudimos procesar el último cobro. Actualizá el método de pago para no perder el acceso.",
   },
+  unpaid: {
+    title: "No pudimos cobrar la suscripción",
+    body: "Después de varios intentos no se pudo procesar el cobro. Actualizá el método de pago para reactivar el Loopy.",
+  },
   canceled: {
     title: "Esta suscripción terminó",
     body: "Para seguir usando este Loopy, hay que reactivar la suscripción.",
+  },
+  paused: {
+    title: "La suscripción está en pausa",
+    body: "El cobro de este Loopy está pausado. Gestioná el pago para reactivarlo.",
   },
 };
 

@@ -297,9 +297,41 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (loading || !loop) return;
     const onSuscripcion = pathname === `/loop/${loopId}/suscripcion`;
-    if (!onSuscripcion && !hasLoopAccess(subscriptionStatus)) {
+    if (onSuscripcion || hasLoopAccess(subscriptionStatus)) return;
+
+    const justPaid =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("checkout") === "success";
+    if (!justPaid) {
       router.replace(`/loop/${loopId}/suscripcion`);
+      return;
     }
+
+    // Venimos de un pago recién hecho — el webhook puede tardar unos
+    // cientos de ms en escribir la fila. Reintentamos unas pocas veces
+    // antes de mandar a la pantalla de "sin suscripción" a alguien que
+    // ya pagó.
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (cancelled) return;
+        const { data: subRow } = await supabase
+          .from("loop_subscriptions")
+          .select("status")
+          .eq("loop_id", loopId)
+          .maybeSingle();
+        const status = (subRow?.status as SubscriptionStatus | undefined) ?? null;
+        if (hasLoopAccess(status)) {
+          if (!cancelled) setSubscriptionStatus(status);
+          return;
+        }
+      }
+      if (!cancelled) router.replace(`/loop/${loopId}/suscripcion`);
+    })();
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, loop, subscriptionStatus, pathname, loopId]);
 
