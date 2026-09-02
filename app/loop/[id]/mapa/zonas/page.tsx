@@ -20,7 +20,7 @@ export default function ZonasPage() {
   const [addressLabel, setAddressLabel] = useState("");
   const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
 
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: "loopy-google-maps",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
     libraries: ZONAS_LIBRARIES,
@@ -112,7 +112,7 @@ export default function ZonasPage() {
           </button>
         </div>
 
-        {useAddress && isLoaded && (
+        {useAddress && isLoaded && !loadError && (
           <Autocomplete onLoad={setAutocomplete} onPlaceChanged={handlePlaceChanged}>
             <input
               placeholder="Buscar una dirección"
@@ -121,10 +121,15 @@ export default function ZonasPage() {
             />
           </Autocomplete>
         )}
-        {useAddress && !isLoaded && (
+        {useAddress && !isLoaded && !loadError && (
           <p className="text-xs text-loopy-700/60 mb-2">Cargando buscador de direcciones...</p>
         )}
-        {useAddress && (
+        {useAddress && loadError && (
+          <p className="text-red-600 text-xs mb-2">
+            No se pudo cargar el buscador de direcciones. Probá con &quot;Mi ubicación actual&quot; en su lugar.
+          </p>
+        )}
+        {useAddress && !loadError && (
           <p className="text-xs text-loopy-700/60 mb-3">
             {addressCoords ? "Dirección seleccionada." : "Se crea centrada en la dirección que elijas de la lista."}
           </p>
