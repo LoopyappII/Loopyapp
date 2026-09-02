@@ -13,21 +13,37 @@ const USE_CASES = [
     icon: Home,
     title: "Familia",
     body: "Sabe que tus hijos llegaron bien al colegio o volvieron a casa, sin tener que preguntar. Zonas seguras, historial del día y un botón SOS a mano para cualquier imprevisto.",
+    badgeClass: "bg-loopy-600/15",
+    iconClass: "text-loopy-600",
+    borderClass: "border-loopy-600/25 hover:border-loopy-600/50",
+    shadowClass: "hover:shadow-[0_10px_36px_-6px_rgba(75,88,168,0.45)]",
   },
   {
     icon: Heart,
     title: "Tú y alguien más",
-    body: "Comparte tu ubicación en Modo Espejo: os veis los dos, sin jerarquías. Para viajes, planes o simplemente sentiros acompañados en la distancia.",
+    body: "Compártela en privado, solo entre vosotros: nadie más lo sabe. Para saber que el otro ha llegado bien, coordinar sin dar explicaciones, o simplemente sentiros cerca en la distancia.",
+    badgeClass: "bg-glow-500/15",
+    iconClass: "text-glow-500",
+    borderClass: "border-glow-500/25 hover:border-glow-500/50",
+    shadowClass: "hover:shadow-[0_10px_36px_-6px_rgba(236,111,201,0.45)]",
   },
   {
     icon: HeartHandshake,
     title: "Cuidado de mayores",
     body: "Acompaña a un familiar mayor sin invadir su día a día. Modo Supervisión discreto, con alertas y botón de emergencia siempre disponibles.",
+    badgeClass: "bg-bridge/15",
+    iconClass: "text-bridge",
+    borderClass: "border-bridge/25 hover:border-bridge/50",
+    shadowClass: "hover:shadow-[0_10px_36px_-6px_rgba(131,76,156,0.45)]",
   },
   {
     icon: Briefcase,
-    title: "Equipos de trabajo",
+    title: "Empresa / Equipos de trabajo",
     body: "Coordina personal en movimiento — mensajeros, técnicos, vendedores — con visibilidad en tiempo real desde un solo lugar.",
+    badgeClass: "bg-bridge-600/15",
+    iconClass: "text-bridge-600",
+    borderClass: "border-bridge-600/25 hover:border-bridge-600/50",
+    shadowClass: "hover:shadow-[0_10px_36px_-6px_rgba(109,63,131,0.45)]",
   },
 ];
 
@@ -83,10 +99,10 @@ export default function ProductosContent() {
             <motion.div
               key={c.title}
               variants={fadeInUp}
-              className="bg-white rounded-2xl shadow-card p-6 border border-loopy-100 hover:border-bridge/40 hover:shadow-card-hover transition-all"
+              className={`bg-white rounded-2xl shadow-card p-6 border-2 ${c.borderClass} ${c.shadowClass} transition-all`}
             >
-              <div className="w-11 h-11 rounded-xl bg-bridge/12 flex items-center justify-center mb-3">
-                <c.icon size={20} className="text-bridge" />
+              <div className={`w-11 h-11 rounded-xl ${c.badgeClass} flex items-center justify-center mb-3`}>
+                <c.icon size={20} className={c.iconClass} />
               </div>
               <h3 className="font-bold text-loopy-900 mb-2">{c.title}</h3>
               <p className="text-sm text-loopy-700 leading-relaxed">{c.body}</p>
@@ -112,7 +128,7 @@ export default function ProductosContent() {
           variants={fadeInUp}
           className="text-2xl md:text-3xl font-extrabold text-loopy-900 text-center mb-10"
         >
-          Todo se arma como tú quieras
+          Todo se configura como tú quieras
         </motion.h2>
 
         <div className="grid gap-6 md:grid-cols-2">
