@@ -20,16 +20,25 @@ const GUIDE_STEPS = [
     icon: UserPlus,
     title: "Crea tu Loopy",
     body: "Crea un grupo con las personas que quieras: familia, amigos o quien cuides.",
+    badgeClass: "bg-loopy-600/15",
+    iconClass: "text-loopy-600",
+    borderClass: "border-loopy-600/70 hover:border-loopy-600",
   },
   {
     icon: SlidersHorizontal,
     title: "Elige el modo",
     body: "Espejo, donde eres el responsable del grupo y ves a todos en directo, geolocalizados y sin errores; o Supervisión, para acompañar sin ser visto.",
+    badgeClass: "bg-bridge/15",
+    iconClass: "text-bridge",
+    borderClass: "border-bridge/70 hover:border-bridge",
   },
   {
     icon: MapPin,
     title: "Comparte y listo",
     body: "La ubicación se actualiza sola. Tú decides cuándo pausarla o salir del Loopy.",
+    badgeClass: "bg-glow-500/15",
+    iconClass: "text-glow-500",
+    borderClass: "border-glow-500/70 hover:border-glow-500",
   },
 ];
 
@@ -93,10 +102,10 @@ export default function GuiaDeUsoContent() {
             <motion.div
               key={s.title}
               variants={fadeInUp}
-              className="bg-white rounded-2xl shadow-card p-6 border border-loopy-100 text-left"
+              className={`bg-white rounded-2xl shadow-card p-6 border-4 ${s.borderClass} transition-colors text-left`}
             >
-              <div className="w-11 h-11 rounded-xl bg-bridge/12 flex items-center justify-center mb-3">
-                <s.icon size={20} className="text-bridge" />
+              <div className={`w-11 h-11 rounded-xl ${s.badgeClass} flex items-center justify-center mb-3`}>
+                <s.icon size={20} className={s.iconClass} />
               </div>
               <span className="text-xs font-bold text-bridge uppercase tracking-wide">
                 Paso {i + 1}
@@ -129,7 +138,7 @@ export default function GuiaDeUsoContent() {
           >
             <motion.div
               variants={fadeInUp}
-              className={`relative w-full max-w-[280px] mx-auto aspect-[390/844] overflow-hidden rounded-[2rem] shadow-card border border-loopy-100 ${
+              className={`relative w-full max-w-[280px] mx-auto aspect-[390/844] overflow-hidden rounded-[2rem] shadow-[0_8px_28px_rgba(35,42,82,0.10),0_0_16px_rgba(131,76,156,0.22)] border border-loopy-100 ${
                 i % 2 === 1 ? "md:order-2" : ""
               }`}
             >
@@ -144,7 +153,7 @@ export default function GuiaDeUsoContent() {
 
             <motion.div
               variants={fadeInUp}
-              className={`text-center md:text-left ${
+              className={`text-center md:text-left rounded-2xl bg-bridge/10 p-6 md:p-8 ${
                 i % 2 === 1 ? "md:order-1" : ""
               }`}
             >
