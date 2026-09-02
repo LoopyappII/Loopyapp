@@ -436,3 +436,45 @@ Manual/Playwright check against `npm run dev` (needs `NEXT_PUBLIC_GOOGLE_MAPS_AP
 git add components/LiveMap.tsx app/loop/[id]/LoopContext.tsx app/loop/[id]/layout.tsx app/loop/[id]/mapa/zonas/page.tsx
 git commit -m "feat: create safe zones by address, not only live GPS"
 ```
+
+## Known gap (post-merge-review, 2026-09-02)
+
+Task 3's address-search feature does not work end-to-end in production today:
+the client's Google Cloud project does not have the legacy Google Places API
+enabled. Confirmed live (QA account, no GPS permission granted): typing an
+address into the "Elegir dirección" field never shows suggestions, and the
+browser console logs `LegacyApiNotActivatedMapError`, alongside a Google
+deprecation notice that as of March 2025 new customers may not be able to
+enable the legacy Places API at all — only "Places API (New)", accessed via
+the `PlaceAutocompleteElement` web component rather than the
+`google.maps.places.Autocomplete` widget this code uses (from
+`@react-google-maps/api`, the only Places surface that library currently
+wraps).
+
+This is not a defect in the shipped code — it correctly uses the only Places
+integration available in the installed library version, and the default
+"Mi ubicación actual" (GPS) path is completely unaffected. It's an external,
+account-level gap.
+
+**Escalation order for whoever owns the Google Cloud Console access:**
+
+1. Try enabling legacy **"Places API"** in the project. This project has
+   never used Places before, so this will likely fail per Google's "new
+   customers" restriction — but it costs a few minutes to check, and if it
+   works, this feature is unblocked with zero code changes.
+2. If blocked: enable **"Places API (New)"** instead, and open a follow-up
+   task to replace `<Autocomplete>` with `PlaceAutocompleteElement`
+   (reachable via `google.maps.importLibrary("places")` on the
+   already-loaded script — no new npm dependency needed). Fold these two
+   known bugs into that same follow-up, since both only matter once address
+   search can actually produce a selection:
+   - No `window.gm_authFailure` handler and no guard for a missing/invalid
+     `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` on the zonas page (unlike
+     `components/LiveMap.tsx`, which already shows a clear
+     "Falta configurar..." message in that case) — right now an
+     auth/enablement failure looks identical to "no suggestions yet",
+     with no error surfaced.
+3. While in the Console either way: confirm the (public, by design)
+   `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` has HTTP-referrer restrictions and an
+   API restriction list configured, since enabling Places gives that key
+   access to a billable API surface.

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { ArrowLeft, MapPin, LocateFixed } from "lucide-react";
 import Link from "next/link";
-import { Autocomplete, useJsApiLoader, type Libraries } from "@react-google-maps/api";
+import { Autocomplete, useJsApiLoader } from "@react-google-maps/api";
 import { useLoop } from "../../LoopContext";
+import { MAPS_LIBRARIES } from "@/lib/googleMapsLibraries";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-const ZONAS_LIBRARIES: Libraries = ["places"];
 
 export default function ZonasPage() {
   const { loopId, zones, addZone } = useLoop();
@@ -23,7 +23,7 @@ export default function ZonasPage() {
   const { isLoaded, loadError } = useJsApiLoader({
     id: "loopy-google-maps",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
-    libraries: ZONAS_LIBRARIES,
+    libraries: MAPS_LIBRARIES,
   });
 
   function handlePlaceChanged() {
@@ -46,7 +46,7 @@ export default function ZonasPage() {
     }
     setCreating(true);
     setError(null);
-    const { error } = await addZone(zoneName, zoneRadius, useAddress ? addressCoords! : undefined);
+    const { error } = await addZone(zoneName, zoneRadius, useAddress && addressCoords ? addressCoords : undefined);
     if (error) {
       setError(error);
     } else {
@@ -112,12 +112,22 @@ export default function ZonasPage() {
           </button>
         </div>
 
+        {/* Requiere la "Places API" (legacy) habilitada en el proyecto de Google
+            Cloud del cliente. Si no lo está, el widget carga sin error pero nunca
+            sugiere direcciones (LegacyApiNotActivatedMapError en la consola del
+            navegador). Ver la sección "Known gap" al final del plan de este
+            feature (docs/superpowers/plans/2026-09-02-loopy-product-polish.md)
+            para el diagnóstico completo y los próximos pasos. */}
         {useAddress && isLoaded && !loadError && (
           <Autocomplete onLoad={setAutocomplete} onPlaceChanged={handlePlaceChanged}>
             <input
               placeholder="Buscar una dirección"
               className="w-full mb-2 px-3 py-2 rounded-lg border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
-              defaultValue={addressLabel}
+              value={addressLabel}
+              onChange={(e) => {
+                setAddressLabel(e.target.value);
+                setAddressCoords(null);
+              }}
             />
           </Autocomplete>
         )}

@@ -21,7 +21,7 @@ const USE_CASES = [
   {
     icon: Heart,
     title: "Tú y alguien más",
-    body: "Compártela en privado, solo entre vosotros: nadie más lo sabe. Para saber que el otro ha llegado bien, coordinar sin dar explicaciones, o simplemente sentiros cerca en la distancia.",
+    body: "Comparte tu ubicación en privado, solo entre vosotros: nadie más lo sabe. Para saber que el otro ha llegado bien, coordinar sin dar explicaciones, o simplemente sentiros cerca en la distancia.",
     badgeClass: "bg-glow-500/15",
     iconClass: "text-glow-500",
     borderClass: "border-glow-500/25 hover:border-glow-500/50",
