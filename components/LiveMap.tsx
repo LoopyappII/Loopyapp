@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GoogleMap, Marker, Circle, Polyline, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+import { MAPS_LIBRARIES } from "@/lib/googleMapsLibraries";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -70,6 +71,7 @@ export default function LiveMap({
   const { isLoaded, loadError } = useJsApiLoader({
     id: "loopy-google-maps",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
+    libraries: MAPS_LIBRARIES,
   });
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);

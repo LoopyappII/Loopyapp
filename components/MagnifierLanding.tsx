@@ -57,6 +57,10 @@ function LandingContent() {
               Crea un Loopy y comparte ubicación entre pares, o supervisa a
               quien más te importa. Tú eliges el modo.
             </motion.p>
+            <motion.p variants={fadeInUp} className="mt-2 text-sm text-white/60 max-w-md">
+              El admin siempre tiene el control: decide el modo, quién forma
+              parte del Loopy, y gestiona todo desde un solo lugar.
+            </motion.p>
             <motion.div variants={fadeInUp} className="mt-8">
               <MotionLink
                 whileHover={{ scale: 1.03 }}
