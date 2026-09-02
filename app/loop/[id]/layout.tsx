@@ -335,11 +335,16 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, loop, subscriptionStatus, pathname, loopId]);
 
-  async function addZone(name: string, radiusM: number): Promise<{ error: string | null }> {
-    if (!myPos) return { error: "Esperando tu ubicación para crear la zona..." };
+  async function addZone(
+    name: string,
+    radiusM: number,
+    coords?: { lat: number; lng: number }
+  ): Promise<{ error: string | null }> {
+    const center = coords ?? myPos;
+    if (!center) return { error: "Esperando tu ubicación para crear la zona..." };
     const { data, error } = await supabase
       .from("safe_zones")
-      .insert({ loop_id: loopId, name, lat: myPos.lat, lng: myPos.lng, radius_m: radiusM, created_by: userId })
+      .insert({ loop_id: loopId, name, lat: center.lat, lng: center.lng, radius_m: radiusM, created_by: userId })
       .select()
       .single();
     if (error || !data) return { error: error?.message || "No se pudo crear la zona" };

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { GoogleMap, Marker, Circle, Polyline, InfoWindow, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, Marker, Circle, Polyline, InfoWindow, useJsApiLoader, type Libraries } from "@react-google-maps/api";
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const containerStyle = { width: "100%", height: "100%" };
+
+const MAP_LIBRARIES: Libraries = ["places"];
 
 // Estilo de mapa sobrio (sin POIs/transporte de fondo) acorde a la paleta de Loopy.
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
@@ -70,6 +72,7 @@ export default function LiveMap({
   const { isLoaded, loadError } = useJsApiLoader({
     id: "loopy-google-maps",
     googleMapsApiKey: GOOGLE_MAPS_API_KEY || "",
+    libraries: MAP_LIBRARIES,
   });
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);

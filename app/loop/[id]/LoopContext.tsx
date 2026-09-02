@@ -44,7 +44,7 @@ export interface LoopContextValue {
   routePoints: { lat: number; lng: number }[];
   routeLoading: boolean;
   toggleRoute: (uid: string) => void;
-  addZone: (name: string, radiusM: number) => Promise<{ error: string | null }>;
+  addZone: (name: string, radiusM: number, coords?: { lat: number; lng: number }) => Promise<{ error: string | null }>;
   saveAge: (age: number) => Promise<void>;
   saveLoopSettings: (
     speedLimitKmh: number | null,
