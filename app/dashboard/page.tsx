@@ -87,6 +87,24 @@ export default function DashboardPage() {
       return;
     }
 
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    try {
+      if (!accessToken) throw new Error("Sin sesión");
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ loopId: loop.id }),
+      });
+      const json = await res.json();
+      if (res.ok && json.url) {
+        window.location.href = json.url;
+        return;
+      }
+    } catch {
+      // Seguimos con la navegación normal — el layout del Loopy gatea el
+      // acceso igual si la suscripción no quedó creada.
+    }
     router.push(`/loop/${loop.id}/familia`);
   }
 

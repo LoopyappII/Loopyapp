@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { Settings } from "lucide-react";
@@ -9,7 +9,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { haversineMeters } from "@/lib/geo";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import type { MapMember } from "@/components/LiveMap";
-import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert } from "@/lib/types";
+import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert, SubscriptionStatus } from "@/lib/types";
+import { hasLoopAccess } from "@/lib/types";
 import BottomTabBar from "@/components/loop/BottomTabBar";
 import { LoopContext, type LoopContextValue, type ZoneEventRow } from "./LoopContext";
 
@@ -17,9 +18,11 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
   const params = useParams();
   const router = useRouter();
   const loopId = params.id as string;
+  const pathname = usePathname();
 
   const [userId, setUserId] = useState<string | null>(null);
   const [loop, setLoop] = useState<Loop | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [members, setMembers] = useState<LoopMember[]>([]);
   const [mapMembers, setMapMembers] = useState<Record<string, MapMember>>({});
   const [zones, setZones] = useState<SafeZone[]>([]);
@@ -64,6 +67,13 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
       .eq("id", loopId)
       .single();
     setLoop(loopData);
+
+    const { data: subRow } = await supabase
+      .from("loop_subscriptions")
+      .select("status")
+      .eq("loop_id", loopId)
+      .maybeSingle();
+    setSubscriptionStatus((subRow?.status as SubscriptionStatus | undefined) ?? null);
 
     const { data: memberRows } = await supabase
       .from("loop_members")
@@ -284,6 +294,47 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     return () => navigator.geolocation.clearWatch(watchId);
   }, [userId, loopId, zones, loop?.speed_limit_kmh]);
 
+  useEffect(() => {
+    if (loading || !loop) return;
+    const onSuscripcion = pathname === `/loop/${loopId}/suscripcion`;
+    if (onSuscripcion || hasLoopAccess(subscriptionStatus)) return;
+
+    const justPaid =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("checkout") === "success";
+    if (!justPaid) {
+      router.replace(`/loop/${loopId}/suscripcion`);
+      return;
+    }
+
+    // Venimos de un pago recién hecho — el webhook puede tardar unos
+    // cientos de ms en escribir la fila. Reintentamos unas pocas veces
+    // antes de mandar a la pantalla de "sin suscripción" a alguien que
+    // ya pagó.
+    let cancelled = false;
+    (async () => {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (cancelled) return;
+        const { data: subRow } = await supabase
+          .from("loop_subscriptions")
+          .select("status")
+          .eq("loop_id", loopId)
+          .maybeSingle();
+        const status = (subRow?.status as SubscriptionStatus | undefined) ?? null;
+        if (hasLoopAccess(status)) {
+          if (!cancelled) setSubscriptionStatus(status);
+          return;
+        }
+      }
+      if (!cancelled) router.replace(`/loop/${loopId}/suscripcion`);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, loop, subscriptionStatus, pathname, loopId]);
+
   async function addZone(name: string, radiusM: number): Promise<{ error: string | null }> {
     if (!myPos) return { error: "Esperando tu ubicación para crear la zona..." };
     const { data, error } = await supabase
@@ -420,6 +471,7 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     loop,
     members,
     isAdmin: loop.admin_id === userId,
+    subscriptionStatus,
     zones,
     mapMembers,
     events,

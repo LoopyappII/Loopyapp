@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert } from "@/lib/types";
+import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert, SubscriptionStatus } from "@/lib/types";
 import type { MapMember } from "@/components/LiveMap";
 
 export interface ZoneEventRow {
@@ -33,6 +33,7 @@ export interface LoopContextValue {
   loop: Loop;
   members: LoopMember[];
   isAdmin: boolean;
+  subscriptionStatus: SubscriptionStatus | null;
   zones: SafeZone[];
   mapMembers: Record<string, MapMember>;
   events: ZoneEventRow[];
