@@ -29,6 +29,8 @@ export interface LoopMember {
   pending_name: string | null;
   pending_phone: string | null;
   member_color: string | null;
+  pending_lat: number | null;
+  pending_lng: number | null;
   profiles?: Profile;
 }
 

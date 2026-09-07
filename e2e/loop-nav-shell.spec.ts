@@ -455,7 +455,19 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
     await expect(page1.getByText("QA Invitado")).toBeVisible({ timeout: 10000 });
     await expect(page1.getByText("Invitado", { exact: true })).toBeVisible();
 
-    // Not shown on Mapa or Rutas — those only list joined (real) members.
+    // Preliminary location: admin sets it via "Mi ubicación actual" (geo mocked
+    // above), confirms the pin indicator appears next to the "Invitado" badge.
+    await page1.getByRole("button", { name: "Agregar ubicación aproximada de QA Invitado" }).click();
+    await page1.getByRole("button", { name: "Mi ubicación actual" }).click();
+    await page1.getByRole("button", { name: "Guardar ubicación" }).click();
+    await expect(page1.locator('[aria-label="Tiene ubicación aproximada cargada"]')).toBeVisible({
+      timeout: 10000,
+    });
+
+    // The bottom avatar strip on Mapa and the member list on Rutas only list
+    // joined (real) members — a pending member's name never appears there,
+    // even with a preliminary location set (it only renders as a map marker,
+    // whose name text lives inside a closed-by-default InfoWindow).
     await page1.getByRole("link", { name: "Mapa", exact: true }).click();
     await expect(page1.getByText("QA Invitado")).toHaveCount(0);
     await page1.getByRole("link", { name: "Rutas", exact: true }).click();

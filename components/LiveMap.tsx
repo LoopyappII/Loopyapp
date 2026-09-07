@@ -25,12 +25,28 @@ function markerIcon(color: string): google.maps.Symbol {
   };
 }
 
+// Marcador sintético para un miembro agregado por teléfono que todavía
+// no se registró: mismo tono bridge que el resto de la marca, pero
+// semitransparente y sin relleno sólido, para que no se confunda con
+// una ubicación en vivo.
+function pendingMarkerIcon(): google.maps.Symbol {
+  return {
+    path: "M0,0 m -8,0 a 8,8 0 1,0 16,0 a 8,8 0 1,0 -16,0",
+    fillColor: "#834c9c",
+    fillOpacity: 0.35,
+    strokeColor: "#834c9c",
+    strokeWeight: 2,
+    scale: 1,
+  };
+}
+
 export interface MapMember {
   userId: string;
   name: string;
   lat: number;
   lng: number;
   isMe: boolean;
+  isPending?: boolean; // marcador sintético: agregado por teléfono, todavía no se unió
 }
 
 export interface MapZone {
@@ -145,14 +161,26 @@ export default function LiveMap({
         <Marker
           key={m.userId}
           position={{ lat: m.lat, lng: m.lng }}
-          icon={markerIcon(m.isMe ? "#834c9c" : "#5b6fc4")}
+          icon={m.isPending ? pendingMarkerIcon() : markerIcon(m.isMe ? "#834c9c" : "#5b6fc4")}
           onClick={() => setOpenMemberId(m.userId)}
         >
           {openMemberId === m.userId && (
             <InfoWindow onCloseClick={() => setOpenMemberId(null)}>
               <span className="text-sm text-loopy-900">
-                {m.name}
-                {m.isMe ? " (vos)" : ""}
+                {m.isPending ? (
+                  <>
+                    {m.name}
+                    <br />
+                    <span className="text-xs text-loopy-700/70">
+                      Ubicación aproximada — todavía no se unió
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    {m.name}
+                    {m.isMe ? " (vos)" : ""}
+                  </>
+                )}
               </span>
             </InfoWindow>
           )}
