@@ -59,6 +59,10 @@ export interface LoopContextValue {
   ) => Promise<{ error: string | null }>;
   updatePendingMemberPhone: (memberId: string, phone: string) => Promise<{ error: string | null }>;
   cancelPendingMember: (memberId: string) => Promise<{ error: string | null }>;
+  setPendingMemberLocation: (
+    memberId: string,
+    coords?: { lat: number; lng: number }
+  ) => Promise<{ error: string | null }>;
 }
 
 export const LoopContext = createContext<LoopContextValue | null>(null);

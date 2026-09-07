@@ -22,7 +22,17 @@ export default function MapaPage() {
   const { loopId, members, mapMembers, zones, myPos, routeUserId, routePoints, routeLoading, toggleRoute } =
     useLoop();
 
-  const memberList: MapMember[] = Object.values(mapMembers);
+  const pendingWithLocation: MapMember[] = members
+    .filter((m) => !m.user_id && m.pending_lat != null && m.pending_lng != null)
+    .map((m) => ({
+      userId: `pending-${m.id}`,
+      name: m.pending_name || "Invitado",
+      lat: m.pending_lat as number,
+      lng: m.pending_lng as number,
+      isMe: false,
+      isPending: true,
+    }));
+  const memberList: MapMember[] = [...Object.values(mapMembers), ...pendingWithLocation];
   const mapZones: MapZone[] = zones.map((z) => ({
     id: z.id,
     name: z.name,

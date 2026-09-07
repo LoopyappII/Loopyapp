@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Route as RouteIcon, UserPlus, Pencil, X, Check, Copy } from "lucide-react";
+import { Route as RouteIcon, UserPlus, Pencil, X, Check, Copy, MapPin } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useLoop, roleLabel } from "../LoopContext";
 import { MEMBER_COLOR_OPTIONS, getMemberGradient } from "@/lib/memberColors";
+import LocationPicker from "@/components/LocationPicker";
 import type { MemberRole } from "@/lib/types";
 
 export default function FamiliaPage() {
@@ -20,6 +21,7 @@ export default function FamiliaPage() {
     addPendingMember,
     updatePendingMemberPhone,
     cancelPendingMember,
+    setPendingMemberLocation,
   } = useLoop();
   const [ageInput, setAgeInput] = useState("");
 
@@ -33,6 +35,10 @@ export default function FamiliaPage() {
 
   const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
   const [editPhoneValue, setEditPhoneValue] = useState("");
+
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [savingLocation, setSavingLocation] = useState(false);
 
   const [codeCopied, setCodeCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
@@ -82,6 +88,18 @@ export default function FamiliaPage() {
     if (!editPhoneValue) return;
     await updatePendingMemberPhone(memberId, editPhoneValue);
     setEditingPhoneId(null);
+  }
+
+  async function handleSaveLocation(memberId: string, coords?: { lat: number; lng: number }) {
+    setSavingLocation(true);
+    setLocationError(null);
+    const { error } = await setPendingMemberLocation(memberId, coords);
+    if (error) {
+      setLocationError(error);
+    } else {
+      setEditingLocationId(null);
+    }
+    setSavingLocation(false);
   }
 
   return (
@@ -153,6 +171,13 @@ export default function FamiliaPage() {
                         Invitado
                       </span>
                     )}
+                    {isPending && m.pending_lat != null && (
+                      <MapPin
+                        size={12}
+                        className="text-bridge shrink-0"
+                        aria-label="Tiene ubicación aproximada cargada"
+                      />
+                    )}
                   </span>
                   {!isPending && m.profiles?.age ? (
                     <span className="block text-xs text-loopy-700/60">{m.profiles.age} años</span>
@@ -178,6 +203,17 @@ export default function FamiliaPage() {
                       </button>
                     </span>
                   )}
+                  {isPending && editingLocationId === m.id && (
+                    <LocationPicker
+                      onSelect={(coords) => handleSaveLocation(m.id, coords)}
+                      onCancel={() => {
+                        setEditingLocationId(null);
+                        setLocationError(null);
+                      }}
+                      saving={savingLocation}
+                      error={locationError}
+                    />
+                  )}
                 </span>
                 <span className="flex items-center gap-2 shrink-0">
                   {!isPending && <span className="text-xs text-bridge font-medium">{roleLabel(m.role)}</span>}
@@ -190,6 +226,30 @@ export default function FamiliaPage() {
                       className="w-6 h-6 rounded-full flex items-center justify-center text-loopy-700/50 hover:bg-loopy-50 hover:text-bridge"
                     >
                       <Pencil size={12} />
+                    </button>
+                  )}
+                  {isPending && isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingLocationId((prev) => {
+                          setLocationError(null);
+                          return prev === m.id ? null : m.id;
+                        })
+                      }
+                      aria-label={
+                        m.pending_lat != null
+                          ? `Editar ubicación aproximada de ${displayName}`
+                          : `Agregar ubicación aproximada de ${displayName}`
+                      }
+                      title="Ubicación aproximada"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        editingLocationId === m.id
+                          ? "bg-bridge text-white"
+                          : "text-loopy-700/50 hover:bg-loopy-50 hover:text-bridge"
+                      }`}
+                    >
+                      <MapPin size={12} />
                     </button>
                   )}
                   {isPending && isAdmin && (

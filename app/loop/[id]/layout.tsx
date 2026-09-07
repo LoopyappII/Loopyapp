@@ -434,6 +434,26 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     return { error: null };
   }
 
+  async function setPendingMemberLocation(
+    memberId: string,
+    coords?: { lat: number; lng: number }
+  ): Promise<{ error: string | null }> {
+    const point = coords ?? myPos;
+    if (!point) return { error: "Esperando tu ubicación para guardarla..." };
+    const { data, error } = await supabase
+      .from("loop_members")
+      .update({ pending_lat: point.lat, pending_lng: point.lng })
+      .eq("id", memberId)
+      .is("user_id", null)
+      .select()
+      .single();
+    if (error || !data) return { error: error?.message || "No se pudo guardar la ubicación" };
+    setMembers((prev) =>
+      prev.map((m) => (m.id === memberId ? { ...m, pending_lat: point.lat, pending_lng: point.lng } : m))
+    );
+    return { error: null };
+  }
+
   function toggleRoute(uid: string) {
     if (routeUserId === uid) {
       setRouteUserId(null);
@@ -493,6 +513,7 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     addPendingMember,
     updatePendingMemberPhone,
     cancelPendingMember,
+    setPendingMemberLocation,
   };
 
   return (
