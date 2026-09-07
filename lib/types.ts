@@ -78,7 +78,11 @@ export type SubscriptionStatus =
   | "past_due"
   | "canceled"
   | "unpaid"
-  | "paused";
+  | "paused"
+  // Estado local, nunca viene de Stripe: un admin en la lista de
+  // ADMIN_BYPASS_EMAILS (ver app/api/stripe/checkout/route.ts) que crea o
+  // usa un Loopy sin pasar por el pago real. Solo para pruebas/uso interno.
+  | "admin_bypass";
 
 export interface LoopSubscription {
   loop_id: string;
@@ -91,7 +95,7 @@ export interface LoopSubscription {
   updated_at: string;
 }
 
-const ACCESS_GRANTING_STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due"];
+const ACCESS_GRANTING_STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due", "admin_bypass"];
 
 export function hasLoopAccess(status: SubscriptionStatus | null | undefined): boolean {
   return !!status && ACCESS_GRANTING_STATUSES.includes(status);
