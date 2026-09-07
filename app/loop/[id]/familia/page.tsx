@@ -326,7 +326,7 @@ export default function FamiliaPage() {
             className="loopy-phone-input w-full mb-3"
           />
           <p className="text-xs text-loopy-700/60 mb-2">Color</p>
-          <div className="flex gap-2 mb-3">
+          <div className="flex flex-wrap gap-2 mb-3">
             {MEMBER_COLOR_OPTIONS.map((opt) => (
               <button
                 key={opt.slug}
