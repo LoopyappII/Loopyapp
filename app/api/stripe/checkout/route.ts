@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripeClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireLoopAdmin } from "@/lib/stripeAuth";
+import { isAdminBypassEmail } from "@/lib/adminBypass";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { loopId?: string };
@@ -10,13 +11,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
 
+  const loopId = auth.loop.id;
+
+  // Admin en ADMIN_BYPASS_EMAILS: se activa el Loopy sin pasar por Stripe.
+  // Nunca se llama a la API de Stripe ni se cobra nada. La respuesta no
+  // lleva `url` (a propósito): el dashboard ya navega directo al Loopy
+  // cuando no hay `url` en la respuesta, y la pantalla de suscripción
+  // redirige explícitamente al ver `bypass: true`.
+  if (isAdminBypassEmail(auth.userEmail)) {
+    const { error } = await supabaseAdmin.from("loop_subscriptions").upsert(
+      {
+        loop_id: loopId,
+        stripe_customer_id: `admin_bypass_${loopId}`,
+        stripe_subscription_id: `admin_bypass_${loopId}`,
+        status: "admin_bypass",
+      },
+      { onConflict: "loop_id" }
+    );
+    if (error) {
+      return NextResponse.json(
+        { error: `No se pudo activar el acceso de administrador: ${error.message}` },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ bypass: true });
+  }
+
   const priceId = process.env.STRIPE_PRICE_ID;
   if (!priceId) {
     return NextResponse.json({ error: "Falta configurar STRIPE_PRICE_ID" }, { status: 500 });
   }
 
   const origin = req.headers.get("origin") || "https://www.directloopy.com";
-  const loopId = auth.loop.id;
 
   try {
     const { data: existingSub } = await supabaseAdmin

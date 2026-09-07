@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, CreditCard } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useLoop } from "../LoopContext";
@@ -43,10 +44,19 @@ const STATUS_COPY: Record<SubscriptionStatus | "none", { title: string; body: st
     title: "La suscripción está en pausa",
     body: "El cobro de este Loopy está pausado. Gestioná el pago para reactivarlo.",
   },
+  // En la práctica nunca se ve: hasLoopAccess("admin_bypass") es true, así
+  // que el gate de suscripción no manda a nadie acá con este estado. Solo
+  // cubre a un admin que navega manualmente a /suscripcion de un Loopy con
+  // bypass activo.
+  admin_bypass: {
+    title: "Este Loopy tiene acceso de administrador",
+    body: "No hace falta gestionar ningún pago — el acceso ya está activo.",
+  },
 };
 
 export default function SuscripcionPage({ params }: { params: { id: string } }) {
   const { subscriptionStatus, isAdmin } = useLoop();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,6 +92,14 @@ export default function SuscripcionPage({ params }: { params: { id: string } }) 
         window.location.href = json.url;
         return;
       }
+      if (res.ok && json.bypass) {
+        // Admin en ADMIN_BYPASS_EMAILS: el checkout ya activó el Loopy sin
+        // Stripe (ver app/api/stripe/checkout/route.ts) — no hay `url` a
+        // dónde ir, así que navegamos directo, a diferencia del dashboard
+        // (que ya hace esto solo al no recibir `url`).
+        router.push(`/loop/${params.id}/familia`);
+        return;
+      }
       setError(json.error || "No se pudo continuar");
     } catch {
       setError("No se pudo conectar con el servidor de pagos");
@@ -96,7 +114,7 @@ export default function SuscripcionPage({ params }: { params: { id: string } }) 
       </div>
       <h1 className="text-xl font-bold text-loopy-900 mb-2">{copy.title}</h1>
       <p className="text-loopy-700 max-w-sm mb-6">{copy.body}</p>
-      {isAdmin ? (
+      {status === "admin_bypass" ? null : isAdmin ? (
         <button
           onClick={goToCheckoutOrPortal}
           disabled={loading}
