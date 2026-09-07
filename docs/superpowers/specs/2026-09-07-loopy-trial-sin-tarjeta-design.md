@@ -1,6 +1,7 @@
-# Loopy: alta mínima + trial sin tarjeta + documentación al finalizar (diseño)
+# Loopy: alta mínima + trial de 1 día sin tarjeta (diseño)
 
-> Borrador — en revisión de seguridad/privacidad antes de cerrarlo.
+> Spec cerrado — pasó por revisión de seguridad/privacidad (2 agentes
+> dedicados) y por la aprobación del usuario sobre los hallazgos.
 
 ## Contexto
 
@@ -30,12 +31,16 @@ termina.
    signup) — igual que el criterio de hoy.
 4. Duración: 1 día — sin cambios respecto al valor actual
    (`trial_period_days: 1`).
-5. El documento de identidad (DNI/NIE/pasaporte) es para
-   facturación/impuestos, pero es de la **persona**, no de una empresa.
+5. El documento de identidad (DNI/NIE/pasaporte) era, en un principio,
+   para facturación/impuestos de la **persona**, no de una empresa.
    Verificado contra la documentación real de Stripe: `tax_id_collection`
    de Checkout **solo colecta IDs de empresa** (ej. `es_cif`, formato
-   `A12345678` — un CIF, no un DNI). No hay atajo nativo de Stripe para
-   esto. Se confirma: se pide igual, con un formulario propio.
+   `A12345678` — un CIF, no un DNI) — no hay atajo nativo de Stripe para
+   un documento personal. **Actualizado tras la revisión de seguridad**
+   (ver más abajo): finalmente NO se le pide documento personal a las
+   familias — solo se usa el `tax_id_collection` nativo de Stripe, y
+   solo aplica a quien factura como empresa. Sección C queda
+   simplificada en consecuencia.
 
 ## Diseño técnico
 
@@ -77,12 +82,37 @@ values (:loop_id, 'trial_no_card_' || :loop_id, 'trial_no_card_' || :loop_id, 't
 ```
 
 `trial_end` lo calcula Postgres con su propio reloj — el cliente nunca
-lo escribe ni lo puede falsear insertando directo. `lib/types.ts` suma
-`"trialing_no_card"` a `SubscriptionStatus` y a
-`ACCESS_GRANTING_STATUSES` (mismo mecanismo ya usado para
-`admin_bypass`, cero piezas nuevas). El gate compara `trial_end`
-(un valor que salió del servidor) contra la hora actual — no
-`loops.created_at`.
+lo escribe ni lo puede falsear insertando directo.
+
+**Ojo, detalle que casi se filtra sin arreglar:** `hasLoopAccess(status)`
+hoy es una función pura del texto del estado — si simplemente se
+agrega `"trialing_no_card"` a `ACCESS_GRANTING_STATUSES` (como se hizo
+con `admin_bypass`), el trial **jamás vencería**, porque nada cambia
+ese texto cuando pasa el día. A diferencia de `admin_bypass` (acceso
+permanente a propósito), `trialing_no_card` es un estado con
+vencimiento — necesita el dato de tiempo, no solo el texto. `lib/types.ts`
+suma `"trialing_no_card"` a `SubscriptionStatus`, pero `hasLoopAccess`
+gana un segundo parámetro opcional:
+
+```ts
+export function hasLoopAccess(
+  status: SubscriptionStatus | null | undefined,
+  trialEnd?: string | null
+): boolean {
+  if (!status) return false;
+  if (status === "trialing_no_card") {
+    return !!trialEnd && new Date(trialEnd) > new Date();
+  }
+  return ACCESS_GRANTING_STATUSES.includes(status);
+}
+```
+
+`app/loop/[id]/layout.tsx` tiene que traer también `trial_end` junto
+con `status` al cargar `loop_subscriptions` (hoy solo guarda el
+string de estado en el contexto) y pasarlo en cada llamado a
+`hasLoopAccess`. La comparación de fecha sigue pasando por el reloj
+del navegador (mismo nivel que el resto del gate hoy, ver más abajo),
+pero el valor `trial_end` en sí es 100% del servidor.
 
 **Esto deja este trial exactamente al mismo nivel de seguridad que el
 trial con tarjeta que ya existe en producción hoy** (que también
@@ -125,66 +155,37 @@ suscripción, y el gate lo manda a `/activar` de entrada.
   para quien nunca debería pasar por Stripe en absoluto, ni siquiera al
   vencer el trial.
 
-### C. Pantalla "Activar tu Loopy"
+### C. Pantalla "Activar tu Loopy" — SIMPLIFICADA (documento solo para empresas)
+
+**Decisión del usuario:** el documento de identidad personal (DNI/NIE/
+pasaporte) NO se le pide a las familias — solo se factura como empresa
+si el propio cliente de Loopy elige esa opción, y ese caso ya lo cubre
+Stripe de forma nativa. Esto elimina por completo el formulario propio
+y la tabla `billing_identity` de las versiones anteriores de este
+documento — ya no hace falta guardar ningún documento de identidad en
+Supabase, así que desaparecen de un saque los problemas de cifrado,
+aislamiento de RLS y actualización de la política de privacidad que
+había marcado la revisión de seguridad para ese diseño.
 
 **Archivo nuevo:** `app/loop/[id]/activar/page.tsx`
 
 Se muestra cuando el gate (B) detecta que el día gratis venció y sigue
-sin suscripción. Formulario:
-- Nombre completo (obligatorio)
-- Tipo de documento: DNI / NIE / Pasaporte / Otro (select)
-- País (select o texto)
-- Número de documento (texto)
+sin suscripción. Formulario mínimo:
+- Nombre completo (obligatorio — es lo único que se difirió del alta
+  que todavía hace falta pedir antes de cobrar)
 
-Al enviar: (1) `update profiles set name = ...`, (2) upsert en la tabla
-nueva `billing_identity` (ver D), (3) llama al mismo
-`/api/stripe/checkout` de siempre para ir a pagar. Si vuelve de Stripe
-sin completar el pago, a partir de ahí cae en `/suscripcion` como
-cualquier suscripción incompleta hoy — `/activar` es solo el paso
-previo de datos, una vez completado no se vuelve a pedir.
+Al enviar: `update profiles set name = ...`, y llama al
+`/api/stripe/checkout` de siempre para ir a pagar.
 
-**Hallazgo de seguridad ya corregido en este diseño:** nada impedía que
-alguien llamara a `/api/stripe/checkout` directo (con su token válido,
-sin pasar por `/activar`) y pagara sin cargar nunca el documento —
-no dejaba pagar de más, pero rompía por completo el propósito real de
-pedirlo. Fix: `checkout/route.ts` ahora exige, antes de crear la sesión
-de Stripe (excepto para el camino de `admin_bypass`, que no lo
-necesita), que exista una fila en `billing_identity` para ese usuario —
-si no existe, responde 400 con un código que el cliente usa para
-redirigir a `/activar` en lugar de mostrar un error genérico.
-
-### D. Tabla nueva `billing_identity` — aislada de `profiles`
-
-`profiles` se comparte y se muestra a otros miembros del Loopy (join en
-Familia). El documento de identidad **no puede vivir ahí**. Tabla
-separada:
-
-```sql
-create table public.billing_identity (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  document_type text not null check (document_type in ('dni','nie','pasaporte','otro')),
-  document_country text not null,
-  document_number text not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.billing_identity enable row level security;
-
-create policy "own identity only"
-  on public.billing_identity
-  for all
-  using (user_id = auth.uid())
-  with check (user_id = auth.uid());
-```
-
-Nunca se joinea con `loop_members`/`profiles` en ninguna consulta
-compartida con otros miembros del Loopy.
-
-**Nota legal explícita:** esto es una recomendación de aislamiento
-técnico, no asesoría legal. La base legal de tratamiento (RGPD) y el
-tiempo de retención del documento los tiene que definir alguien con
-criterio legal del lado del cliente antes de ir a producción con esto.
+**Archivo:** `app/api/stripe/checkout/route.ts`
+- Se agrega `tax_id_collection: { enabled: true }` (sin `required`,
+  para no forzarlo) a la creación de la `checkout.sessions.create(...)`.
+  Stripe ya sabe mostrar ese campo solo cuando corresponde según la
+  ubicación del que paga, y queda opcional — una familia lo deja en
+  blanco y sigue de largo; una empresa que quiera su CIF en la factura
+  lo carga ahí mismo, sin que nosotros construyamos ni guardemos nada.
+  Confirmado contra la documentación real de Stripe: el CIF español es
+  `es_cif` (ver Decisión 5 más arriba).
 
 ## Fuera de alcance (sin cambios)
 
@@ -192,54 +193,21 @@ Bypass de admin, alta de familiares por teléfono + ubicación previa,
 Zonas, SOS, Mapa/Rutas, selección de rol en el signup (quedó fuera —
 es la parte "B2" de un brief anterior, no se pidió acá).
 
-## Hallazgos de la revisión de seguridad/privacidad (`billing_identity`)
+## Hallazgos de la revisión de seguridad/privacidad sobre `billing_identity` (tabla descartada)
 
-Agente dedicado, leyó el código real (`lib/supabaseAdmin.ts`,
-`app/api/stripe/webhook/route.ts`, `app/loop/[id]/layout.tsx`,
-`app/privacidad/page.tsx`, políticas RLS existentes) antes de opinar.
-
-1. **[Alto] El texto plano depende de un solo secreto, sin decirlo.**
-   `SUPABASE_SERVICE_ROLE_KEY` ya se usa hoy (webhook de Stripe) y
-   bypassea RLS por diseño — confirmado en el propio código
-   (`lib/supabaseAdmin.ts`). Con `billing_identity`, esa misma key pasa
-   de "puede forjar estado de suscripción" a "puede leer el DNI de
-   cada usuario". **Decisión a tomar**: cifrar `document_number` a
-   nivel de columna (`pgcrypto`), o como mínimo documentar
-   explícitamente que la confidencialidad de esta tabla depende
-   enteramente de esa key y tratarla en consecuencia (rotación,
-   alcance, quién la tiene).
-2. **[Confirmado, no es un bug] La policy de RLS propuesta es
-   infranqueable** contra el intento de insertar una fila con el
-   `user_id` de otra persona — `auth.uid()` lo resuelve el servidor
-   desde el JWT firmado, no algo que el cliente pueda falsear. Sí se
-   recomienda, seguido el mismo criterio que ya usó esta sesión con
-   `loop_members`, verificarlo con un test real contra la base antes
-   de day 1 (no alcanza con la lectura del SQL).
-3. **[Medio] Un solo punto de unión a vigilar a futuro:**
-   `app/loop/[id]/layout.tsx:80` es el único lugar de todo el repo que
-   hace join de `profiles` con otros miembros
-   (`profiles!loop_members_user_id_fkey`) — es el lugar exacto a
-   revisar en cualquier PR futura para asegurarse de que nadie
-   extienda ese join a `billing_identity`. Hoy no existe ninguna
-   pantalla de administración que liste usuarios/datos completos.
-4. **[Decisión de producto, no técnica] ¿Pedirle el documento a
-   TODO el mundo?** Stripe ya cubre el caso empresa (CIF) sin pedir
-   nada nuevo. Facturar a un particular en España normalmente NO
-   requiere su DNI salvo que pida factura completa — pedírselo a el
-   100% de las familias que pagan €14,99/mes es más dato del necesario
-   (tensiona con minimización de datos de RGPD). **Alternativa**: la
-   pantalla de activación pregunta primero "¿facturación particular o
-   empresa?" y sólo pide documento de identidad si corresponde,
-   reduciendo cuántas filas de `billing_identity` existen en total.
-5. **[Medio] Huecos que ya existían, pero que este dato hace más
-   graves:** no hay ningún flujo de borrado automático hoy (el borrado
-   de cuenta es manual, por email a soporte); la política de
-   privacidad pública (`app/privacidad/page.tsx`) hoy NO menciona que
-   se recolecta un documento de identidad, y promete borrar todo al
-   cerrar la cuenta — lo cual choca con que Hacienda exige guardar
-   datos de facturación ~4 años. Ninguna tabla de esta app tiene
-   auditoría de accesos (no es algo a construir solo para esta, pero
-   vale que quede anotado).
+**Obsoleto** — se dejaba registro acá porque la revisión de seguridad
+se hizo sobre la versión del diseño que sí guardaba el documento
+personal en Supabase. El usuario decidió después no pedirle DNI/NIE/
+pasaporte a las familias (sección C), así que `billing_identity` nunca
+se crea y estos hallazgos no aplican a lo que se va a implementar.
+Quedan resumidos por si el documento personal vuelve a discutirse más
+adelante: el mayor riesgo era que el texto plano dependía enteramente
+de que no se filtre `SUPABASE_SERVICE_ROLE_KEY` (ese secreto ya
+bypasea RLS por diseño, confirmado en `lib/supabaseAdmin.ts`); la
+policy de RLS propuesta en su momento sí era correcta (`auth.uid()` no
+es falseable por el cliente); y pedirle el documento al 100% de las
+familias tensionaba con minimización de datos de RGPD — que es
+justamente lo que motivó la decisión de sacarlo.
 
 ## Hallazgos de la revisión de seguridad (abuso del trial)
 
@@ -275,23 +243,28 @@ leyó `app/dashboard/page.tsx`, `app/loop/[id]/layout.tsx`,
    **Esto es una decisión que le tengo que trasladar al usuario, no
    algo que decido yo solo** — ver la pregunta abajo.
 
-## Abierto — a resolver antes de implementar
+## Decisiones finales del usuario tras la revisión de seguridad
 
-- [ ] **¿Alcance de esta tarea?** Con el rediseño de la sección B, este
-  trial queda tan seguro como el trial con tarjeta actual — pero el
-  hueco de fondo (RLS de datos en vivo sin atar a la suscripción) es
-  preexistente y sigue abierto para AMBOS. Arreglarlo de raíz implica
-  reescribir políticas RLS de varias tablas — bastante más grande que
-  "cuándo se pide la tarjeta". ¿Lo dejamos como item de seguridad
-  aparte y seguimos con esto, o lo sumamos al alcance de esta tarea?
-- [ ] ¿Cifrado de `document_number` a nivel de columna, o se acepta el
-  riesgo documentado (depende enteramente de que no se filtre la
-  `service_role key`)?
-- [ ] ¿Se pide el documento a todos, o solo a quien facture como
-  empresa? (Stripe ya cubre el caso empresa sin pedir nada nuevo;
-  pedírselo a cada familia que paga es más dato del necesario)
-- [ ] Actualizar `app/privacidad/page.tsx` para declarar esta nueva
-  recolección de datos, y definir el tiempo de retención real
-  (¿4 años por normativa fiscal, aunque se borre la cuenta?) — esto
-  necesita a alguien con criterio legal del lado del cliente, no lo
-  resuelvo yo.
+1. **El hueco de RLS de fondo (punto 3 de arriba) se deja fuera de
+   esta tarea, a propósito.** No se resuelve acá — queda anotado como
+   su propio ítem de seguridad para encarar aparte, con su propio
+   brainstorming dedicado dado el tamaño (reescribir políticas de
+   `locations`/`sos_alerts`/`safe_zones`/`zone_events`/`speed_alerts`
+   para que dependan del estado real de la suscripción). Este trial
+   queda al mismo nivel de seguridad que el trial con tarjeta actual —
+   ninguno de los dos resuelve ese hueco, ninguno de los dos lo
+   empeora más allá de lo ya descrito en el hallazgo 3.
+2. **No se pide documento de identidad personal a las familias.**
+   Sección C simplificada: solo nombre completo antes de pagar, más
+   `tax_id_collection` nativo de Stripe (opcional) para quien facture
+   como empresa. Sin tabla nueva, sin dato sensible propio que guardar,
+   sin cambios a `app/privacidad/page.tsx` necesarios por este motivo.
+
+## Fuera de alcance — seguimiento de seguridad separado
+
+- Atar las políticas RLS de datos en vivo (`locations`, `sos_alerts`,
+  `safe_zones`, `zone_events`, `speed_alerts`) al estado real de la
+  suscripción, en vez de depender solo del gate de UI en
+  `app/loop/[id]/layout.tsx`. Preexistente, afecta también al trial
+  con tarjeta que ya está en producción. Requiere su propia sesión de
+  `brainstorming` cuando se decida encararlo.
