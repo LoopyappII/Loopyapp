@@ -13,7 +13,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-const SITE_URL = "https://loopy.company";
+const SITE_URL = "https://www.directloopy.com";
 const DESCRIPTION = "Comparte tu ubicación en tiempo real, de forma simple y segura";
 
 export const metadata: Metadata = {

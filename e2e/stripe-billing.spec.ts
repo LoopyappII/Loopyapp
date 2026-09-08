@@ -116,7 +116,7 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
   const verifyUrl = linkMatch[0].replace(/&amp;/g, "&");
 
   // The confirmation happens server-side on this GET; the app's
-  // redirect_to (loopy.company) doesn't need to actually resolve, so don't
+  // redirect_to (directloopy.com) doesn't need to actually resolve, so don't
   // follow the 303.
   const verifyRes = await page.request.get(verifyUrl, { maxRedirects: 0 });
   expect(verifyRes.status(), "Supabase /auth/v1/verify should accept the token").toBeLessThan(400);

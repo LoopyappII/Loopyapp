@@ -33,7 +33,7 @@ export default function SignupPage() {
       password,
       options: {
         data: { phone },
-        emailRedirectTo: "https://loopy.company/login",
+        emailRedirectTo: "https://www.directloopy.com/login",
       },
     });
     setLoading(false);
