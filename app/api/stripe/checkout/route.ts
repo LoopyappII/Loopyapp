@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripeClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireLoopAdmin } from "@/lib/stripeAuth";
 import { isAdminBypassEmail } from "@/lib/adminBypass";
+import { resolveStripeCustomerId } from "@/lib/stripeCustomerId";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { loopId?: string };
@@ -50,11 +51,12 @@ export async function POST(req: NextRequest) {
       .select("stripe_customer_id")
       .eq("loop_id", loopId)
       .maybeSingle();
+    const existingCustomerId = resolveStripeCustomerId(existingSub?.stripe_customer_id);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: existingSub?.stripe_customer_id || undefined,
-      customer_email: existingSub?.stripe_customer_id ? undefined : auth.userEmail || undefined,
+      customer: existingCustomerId || undefined,
+      customer_email: existingCustomerId ? undefined : auth.userEmail || undefined,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: 1,

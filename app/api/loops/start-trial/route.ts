@@ -74,6 +74,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ trial: false, reason: "already_used" });
   }
 
+  const { data: existingRow, error: existingRowError } = await supabaseAdmin
+    .from("loop_subscriptions")
+    .select("loop_id")
+    .eq("loop_id", loopId)
+    .maybeSingle();
+  if (existingRowError) {
+    return NextResponse.json(
+      { error: `No se pudo verificar el estado del Loopy: ${existingRowError.message}` },
+      { status: 500 }
+    );
+  }
+  if (existingRow) {
+    // Ya existe una fila para este Loopy específico (trial ya activo,
+    // convertido a pago real, o cualquier otro estado) — nunca la
+    // pisamos. Esto también cierra el caso "mismo loop" de la carrera
+    // entre el chequeo de elegibilidad y el insert: llamar de nuevo a
+    // este endpoint para un Loopy que ya tiene fila es un no-op seguro.
+    return NextResponse.json({ trial: false, reason: "already_has_subscription" });
+  }
+
   const trialEnd = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { error: insertError } = await supabaseAdmin.from("loop_subscriptions").upsert(
     {
