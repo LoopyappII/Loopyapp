@@ -52,6 +52,13 @@ const STATUS_COPY: Record<SubscriptionStatus | "none", { title: string; body: st
     title: "Este Loopy tiene acceso de administrador",
     body: "No hace falta gestionar ningún pago — el acceso ya está activo.",
   },
+  // En la práctica nunca se ve: mientras el trial sin tarjeta está vigente
+  // hay acceso (hasLoopAccess), y cuando vence, el gate manda a /activar en
+  // vez de acá. Solo cubre a alguien que navega manualmente a /suscripcion.
+  trialing_no_card: {
+    title: "Tu día de prueba gratis terminó",
+    body: "Volvé a tu Loopy — te vamos a pedir los datos que faltan para activarlo.",
+  },
 };
 
 export default function SuscripcionPage({ params }: { params: { id: string } }) {
@@ -114,7 +121,7 @@ export default function SuscripcionPage({ params }: { params: { id: string } }) 
       </div>
       <h1 className="text-xl font-bold text-loopy-900 mb-2">{copy.title}</h1>
       <p className="text-loopy-700 max-w-sm mb-6">{copy.body}</p>
-      {status === "admin_bypass" ? null : isAdmin ? (
+      {status === "admin_bypass" || status === "trialing_no_card" ? null : isAdmin ? (
         <button
           onClick={goToCheckoutOrPortal}
           disabled={loading}
