@@ -10,7 +10,7 @@ import { haversineMeters } from "@/lib/geo";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import type { MapMember } from "@/components/LiveMap";
 import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert, SubscriptionStatus } from "@/lib/types";
-import { hasLoopAccess } from "@/lib/types";
+import { hasLoopAccess, needsActivation } from "@/lib/types";
 import BottomTabBar from "@/components/loop/BottomTabBar";
 import { LoopContext, type LoopContextValue, type ZoneEventRow } from "./LoopContext";
 
@@ -23,6 +23,7 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
   const [userId, setUserId] = useState<string | null>(null);
   const [loop, setLoop] = useState<Loop | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [trialEnd, setTrialEnd] = useState<string | null>(null);
   const [members, setMembers] = useState<LoopMember[]>([]);
   const [mapMembers, setMapMembers] = useState<Record<string, MapMember>>({});
   const [zones, setZones] = useState<SafeZone[]>([]);
@@ -70,10 +71,11 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
 
     const { data: subRow } = await supabase
       .from("loop_subscriptions")
-      .select("status")
+      .select("status, trial_end")
       .eq("loop_id", loopId)
       .maybeSingle();
     setSubscriptionStatus((subRow?.status as SubscriptionStatus | undefined) ?? null);
+    setTrialEnd(subRow?.trial_end ?? null);
 
     const { data: memberRows } = await supabase
       .from("loop_members")
@@ -297,7 +299,16 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (loading || !loop) return;
     const onSuscripcion = pathname === `/loop/${loopId}/suscripcion`;
-    if (onSuscripcion || hasLoopAccess(subscriptionStatus)) return;
+    const onActivar = pathname === `/loop/${loopId}/activar`;
+    if (onSuscripcion || onActivar || hasLoopAccess(subscriptionStatus, trialEnd)) return;
+
+    // /activar: nunca tuvo suscripción, o tuvo un trial sin tarjeta que ya
+    // venció — falta nombre + pago por primera vez. /suscripcion: ya tuvo
+    // una suscripción real de Stripe alguna vez (reactivar/gestionar pago).
+    if (needsActivation(subscriptionStatus, trialEnd)) {
+      router.replace(`/loop/${loopId}/activar`);
+      return;
+    }
 
     const justPaid =
       typeof window !== "undefined" &&
@@ -318,12 +329,16 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
         if (cancelled) return;
         const { data: subRow } = await supabase
           .from("loop_subscriptions")
-          .select("status")
+          .select("status, trial_end")
           .eq("loop_id", loopId)
           .maybeSingle();
         const status = (subRow?.status as SubscriptionStatus | undefined) ?? null;
-        if (hasLoopAccess(status)) {
-          if (!cancelled) setSubscriptionStatus(status);
+        const newTrialEnd = subRow?.trial_end ?? null;
+        if (hasLoopAccess(status, newTrialEnd)) {
+          if (!cancelled) {
+            setSubscriptionStatus(status);
+            setTrialEnd(newTrialEnd);
+          }
           return;
         }
       }
@@ -333,7 +348,7 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, loop, subscriptionStatus, pathname, loopId]);
+  }, [loading, loop, subscriptionStatus, trialEnd, pathname, loopId]);
 
   async function addZone(
     name: string,
@@ -497,6 +512,7 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     members,
     isAdmin: loop.admin_id === userId,
     subscriptionStatus,
+    trialEnd,
     zones,
     mapMembers,
     events,

@@ -34,6 +34,7 @@ export interface LoopContextValue {
   members: LoopMember[];
   isAdmin: boolean;
   subscriptionStatus: SubscriptionStatus | null;
+  trialEnd: string | null;
   zones: SafeZone[];
   mapMembers: Record<string, MapMember>;
   events: ZoneEventRow[];
