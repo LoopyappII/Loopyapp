@@ -3,6 +3,7 @@ import { NavbarLogo } from "@/components/LoopyLogo";
 
 export const metadata = {
   title: "Términos y condiciones · Loopy",
+  alternates: { canonical: "/terminos" },
 };
 
 export default function TerminosPage() {
@@ -40,7 +41,7 @@ export default function TerminosPage() {
                 <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>{" "}
                 (CIF B73981417) (en adelante, "Loopy" o "nosotros"), disponible
                 a través de{" "}
-                <span className="text-loopy-900">loopy.company</span>. El uso de la
+                <span className="text-loopy-900">directloopy.com</span>. El uso de la
                 Aplicación implica la aceptación plena de estos términos.
               </p>
 

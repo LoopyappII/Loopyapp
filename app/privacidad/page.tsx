@@ -3,6 +3,7 @@ import { NavbarLogo } from "@/components/LoopyLogo";
 
 export const metadata = {
   title: "Política de privacidad · Loopy",
+  alternates: { canonical: "/privacidad" },
 };
 
 export default function PrivacidadPage() {
@@ -47,7 +48,7 @@ export default function PrivacidadPage() {
                   (CIF B73946113), bajo la gestión de{" "}
                   <strong className="text-loopy-900">LOOPER CASHLINE SL</strong>{" "}
                   (CIF B73981417), titular de la aplicación Loopy
-                  (loopy.company), es responsable del tratamiento de tus datos
+                  (directloopy.com), es responsable del tratamiento de tus datos
                   personales. Puedes contactarnos en{" "}
                   <a
                     href="mailto:info@directloopy.com"
