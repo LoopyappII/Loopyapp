@@ -60,6 +60,11 @@ export async function POST(req: NextRequest) {
         trial_period_days: 1,
         metadata: { loop_id: loopId },
       },
+      // Campo nativo de Stripe, opcional (sin `required`): solo colecta ID
+      // fiscal de EMPRESA (ej. es_cif — CIF español, no DNI personal), y
+      // Stripe decide solo cuándo mostrarlo según la ubicación de quien
+      // paga. Una familia lo deja en blanco y sigue de largo.
+      tax_id_collection: { enabled: true },
       client_reference_id: loopId,
       metadata: { loop_id: loopId },
       success_url: `${origin}/loop/${loopId}/familia?checkout=success`,
