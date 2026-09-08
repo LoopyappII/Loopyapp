@@ -128,10 +128,8 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
  * `.pressSequentially()` sends real per-character key events instead, which
  * this library needs.
  */
-async function signUpAndLogin(page: Page, email: string, name: string, phone: string = "+34600000000") {
+async function signUpAndLogin(page: Page, email: string, phone: string = "+34600000000") {
   await page.goto("/signup");
-  const form = page.locator("form");
-  await form.locator("input").first().fill(name); // Nombre: no placeholder/label-for
   await page.locator('input[type="tel"]').pressSequentially(phone, { delay: 20 });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
@@ -175,12 +173,12 @@ test.describe("Stripe billing", () => {
   test("un no-admin no puede crear una Checkout Session para el Loopy de otro", async ({ browser }) => {
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
-    await signUpAndLogin(adminPage, `qa.loopy.stripe.admin.${stamp}@mailinator.com`, "QA Admin");
+    await signUpAndLogin(adminPage, `qa.loopy.stripe.admin.${stamp}@mailinator.com`);
     const loopId = await createLoop(adminPage, `QA Stripe ${stamp}`);
 
     const otherContext = await browser.newContext();
     const otherPage = await otherContext.newPage();
-    await signUpAndLogin(otherPage, `qa.loopy.stripe.other.${stamp}@mailinator.com`, "QA Otro");
+    await signUpAndLogin(otherPage, `qa.loopy.stripe.other.${stamp}@mailinator.com`);
     const otherToken = await getAccessToken(otherPage);
     expect(otherToken).toBeTruthy();
 
@@ -197,7 +195,7 @@ test.describe("Stripe billing", () => {
   test("el webhook actualiza loop_subscriptions con eventos firmados localmente", async ({ browser }) => {
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
-    await signUpAndLogin(adminPage, `qa.loopy.stripe.wh.${stamp}@mailinator.com`, "QA Webhook");
+    await signUpAndLogin(adminPage, `qa.loopy.stripe.wh.${stamp}@mailinator.com`);
     const loopId = await createLoop(adminPage, `QA Webhook ${stamp}`);
 
     const fakeCustomerId = `cus_e2e_${stamp}`;
@@ -265,7 +263,7 @@ test.describe("Stripe billing", () => {
   test("un Loopy sin fila en loop_subscriptions rebota a /suscripcion", async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await signUpAndLogin(page, `qa.loopy.stripe.gate.${stamp}@mailinator.com`, "QA Gate");
+    await signUpAndLogin(page, `qa.loopy.stripe.gate.${stamp}@mailinator.com`);
     const loopId = await createLoop(page, `QA Gate ${stamp}`);
 
     // Renavegar explícito a /familia para confirmar el rebote incluso si

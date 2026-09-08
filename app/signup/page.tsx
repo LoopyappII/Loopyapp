@@ -13,7 +13,6 @@ import { fadeInUp, scaleIn } from "@/lib/motion";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +32,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        data: { name, phone },
+        data: { phone },
         emailRedirectTo: "https://loopy.company/login",
       },
     });
@@ -115,15 +114,6 @@ export default function SignupPage() {
               onSubmit={handleSubmit}
               className="w-full bg-white rounded-2xl shadow-card border border-loopy-100 p-8"
             >
-              <label className="block text-sm font-medium text-loopy-900 mb-1">
-                Nombre
-              </label>
-              <input
-                className="w-full mb-4 px-3 py-2 rounded-lg border border-loopy-50 focus:outline-none focus:ring-2 focus:ring-bridge/60"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
               <label className="block text-sm font-medium text-loopy-900 mb-1">
                 Teléfono
               </label>

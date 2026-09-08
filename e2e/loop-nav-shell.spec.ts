@@ -24,8 +24,8 @@ import { test, expect, type BrowserContext, type Page } from "@playwright/test";
 
 const PASSWORD = "LoopyQA!2026";
 const stamp = Date.now();
-const USER1 = { email: `qa.loopy1.${stamp}@mailinator.com`, name: "QA Uno" };
-const USER2 = { email: `qa.loopy2.${stamp}@mailinator.com`, name: "QA Dos" };
+const USER1 = { email: `qa.loopy1.${stamp}@mailinator.com` };
+const USER2 = { email: `qa.loopy2.${stamp}@mailinator.com` };
 
 // Read from the same env vars lib/supabaseClient.ts:7-13 already exposes
 // (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY), falling back to
@@ -209,10 +209,8 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
  * `.pressSequentially()` sends real per-character key events instead, which
  * this library needs.
  */
-async function signUpAndLogin(page: Page, email: string, name: string, phone: string = "+34600000000") {
+async function signUpAndLogin(page: Page, email: string, phone: string = "+34600000000") {
   await page.goto("/signup");
-  const form = page.locator("form");
-  await form.locator("input").first().fill(name); // Nombre: no placeholder/label-for
   await page.locator('input[type="tel"]').pressSequentially(phone, { delay: 20 });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
@@ -270,8 +268,8 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
   let loopId: string | undefined;
 
   try {
-    await signUpAndLogin(page1, USER1.email, USER1.name);
-    await signUpAndLogin(page2, USER2.email, USER2.name);
+    await signUpAndLogin(page1, USER1.email);
+    await signUpAndLogin(page2, USER2.email);
 
     // Create a Loopy from user1's dashboard. Creating does NOT auto-navigate
     // (app/dashboard/page.tsx's handleCreateLoop only inserts + reloads the
@@ -425,13 +423,13 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
   const page2 = await ctx2.newPage();
   await grantGeo(ctx2, 40.417, -3.704);
 
-  const USER3 = { email: `qa.loopy3.${stamp}@mailinator.com`, name: "QA Auto" };
+  const USER3 = { email: `qa.loopy3.${stamp}@mailinator.com` };
   const AUTO_LINK_PHONE = "+34611222333";
 
   let loopId: string | undefined;
 
   try {
-    await signUpAndLogin(page1, `qa.loopy1b.${stamp}@mailinator.com`, "QA Admin Familia");
+    await signUpAndLogin(page1, `qa.loopy1b.${stamp}@mailinator.com`);
 
     const loopName = `QA Familia ${stamp}`;
     await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
@@ -493,12 +491,18 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
     await page1.getByRole("button", { name: "Agregar", exact: true }).click();
     await expect(page1.getByText("QA Auto Placeholder")).toBeVisible({ timeout: 10000 });
 
-    await signUpAndLogin(page2, USER3.email, USER3.name, AUTO_LINK_PHONE);
+    await signUpAndLogin(page2, USER3.email, AUTO_LINK_PHONE);
     await expect(page2.locator("a", { hasText: loopName })).toBeVisible({ timeout: 15000 });
 
     await page1.reload();
-    await expect(page1.getByText(USER3.name)).toBeVisible({ timeout: 10000 });
+    // USER3 ya no tiene profiles.name (el signup ya no lo pide) — en vez de
+    // buscar un nombre real, confirmamos el auto-link por estructura: el
+    // placeholder pendiente desapareció, no queda ninguna etiqueta
+    // "Invitado", y la lista de miembros tiene exactamente 2 filas (admin +
+    // USER3 ya vinculado) — "QA Invitado" ya se había cancelado antes.
     await expect(page1.getByText("QA Auto Placeholder")).toHaveCount(0);
+    await expect(page1.getByText("Invitado", { exact: true })).toHaveCount(0);
+    await expect(page1.getByRole("listitem")).toHaveCount(2, { timeout: 10000 });
   } finally {
     if (loopId) {
       await cleanupTestData(page1, page2, loopId).catch((err) => {
