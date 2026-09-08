@@ -89,21 +89,25 @@ export default function DashboardPage() {
 
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
-    try {
-      if (!accessToken) throw new Error("Sin sesión");
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ loopId: loop.id }),
-      });
-      const json = await res.json();
-      if (res.ok && json.url) {
-        window.location.href = json.url;
-        return;
+    if (accessToken) {
+      const callStartTrial = () =>
+        fetch("/api/loops/start-trial", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({ loopId: loop.id }),
+        })
+          .then((res) => res.ok)
+          .catch(() => false);
+
+      // Un solo reintento: un blip de red transitorio no debería costarle
+      // el día gratis a alguien. Seguro de reintentar — start-trial es un
+      // no-op si el Loopy ya tiene una fila (ver Fix 3 en
+      // app/api/loops/start-trial/route.ts). Si igual falla, el layout del
+      // Loopy gatea el acceso y manda a /activar de todos modos.
+      const started = await callStartTrial();
+      if (!started) {
+        await callStartTrial();
       }
-    } catch {
-      // Seguimos con la navegación normal — el layout del Loopy gatea el
-      // acceso igual si la suscripción no quedó creada.
     }
     router.push(`/loop/${loop.id}/familia`);
   }

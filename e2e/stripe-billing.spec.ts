@@ -43,6 +43,15 @@ async function getAccessToken(page: Page): Promise<string | null> {
   }, SUPABASE_STORAGE_KEY);
 }
 
+async function getUserId(page: Page, token: string): Promise<string | null> {
+  const res = await page.request.get(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) return null;
+  const data = await res.json();
+  return data.id ?? null;
+}
+
 /**
  * This Supabase project has "Confirm email" ON (verified directly against
  * the real project via the Auth REST API before writing this): signUp()
@@ -114,11 +123,10 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
 }
 
 /**
- * app/signup/page.tsx's Nombre/Email/Contraseña inputs have <label> text but
- * no `placeholder` and no `for`/`id` pairing with their labels, so
- * getByPlaceholder/getByLabel can't find them. They're selected by `type`
- * (email/password) or, for the untyped Nombre input, by DOM order (it's the
- * form's first <input>, before the phone widget's inputs).
+ * app/signup/page.tsx's form has three inputs: Teléfono, Email, and Contraseña.
+ * Email and Contraseña have <label> text but no `placeholder` and no
+ * `for`/`id` pairing with their labels, so getByPlaceholder/getByLabel can't
+ * find them. All three inputs are selectable by `type` (tel, email, password).
  *
  * The Teléfono field is react-phone-number-input (PhoneInput), which renders
  * a country <select> plus a controlled <input type="tel" placeholder="+34
@@ -128,10 +136,8 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
  * `.pressSequentially()` sends real per-character key events instead, which
  * this library needs.
  */
-async function signUpAndLogin(page: Page, email: string, name: string, phone: string = "+34600000000") {
+async function signUpAndLogin(page: Page, email: string, phone: string = "+34600000000") {
   await page.goto("/signup");
-  const form = page.locator("form");
-  await form.locator("input").first().fill(name); // Nombre: no placeholder/label-for
   await page.locator('input[type="tel"]').pressSequentially(phone, { delay: 20 });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(PASSWORD);
@@ -159,13 +165,11 @@ async function signUpAndLogin(page: Page, email: string, name: string, phone: st
 async function createLoop(page: Page, loopName: string) {
   await page.getByPlaceholder(/nombre del loopy/i).fill(loopName);
   await page.getByRole("button", { name: "Crear Loopy" }).click();
-  // Sin STRIPE_PRICE_ID/STRIPE_SECRET_KEY reales cargados hoy, la llamada a
-  // /api/stripe/checkout en handleCreateLoop devuelve error y el frontend
-  // cae al fallback de router.push a /familia — el layout gatea el acceso
-  // ahí mismo (sin fila en loop_subscriptions), así que el destino real
-  // termina siendo /suscripcion. Esperar cualquiera de los dos evita que
-  // el test dependa de cuál gana la carrera.
-  await page.waitForURL(/\/loop\/[^/]+\/(familia|suscripcion)/, { timeout: 30000 });
+  // handleCreateLoop llama a /api/loops/start-trial, no a Stripe — un admin
+  // elegible (primera vez) siempre recibe el trial de 1 día sin tarjeta y
+  // aterriza en /familia, sin depender de STRIPE_PRICE_ID/STRIPE_SECRET_KEY
+  // estar configurados localmente.
+  await page.waitForURL(/\/loop\/[^/]+\/familia/, { timeout: 30000 });
   const loopId = page.url().match(/\/loop\/([^/]+)\//)?.[1];
   if (!loopId) throw new Error(`No se pudo extraer loopId de ${page.url()}`);
   return loopId;
@@ -175,12 +179,12 @@ test.describe("Stripe billing", () => {
   test("un no-admin no puede crear una Checkout Session para el Loopy de otro", async ({ browser }) => {
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
-    await signUpAndLogin(adminPage, `qa.loopy.stripe.admin.${stamp}@mailinator.com`, "QA Admin");
+    await signUpAndLogin(adminPage, `qa.loopy.stripe.admin.${stamp}@mailinator.com`);
     const loopId = await createLoop(adminPage, `QA Stripe ${stamp}`);
 
     const otherContext = await browser.newContext();
     const otherPage = await otherContext.newPage();
-    await signUpAndLogin(otherPage, `qa.loopy.stripe.other.${stamp}@mailinator.com`, "QA Otro");
+    await signUpAndLogin(otherPage, `qa.loopy.stripe.other.${stamp}@mailinator.com`);
     const otherToken = await getAccessToken(otherPage);
     expect(otherToken).toBeTruthy();
 
@@ -197,7 +201,7 @@ test.describe("Stripe billing", () => {
   test("el webhook actualiza loop_subscriptions con eventos firmados localmente", async ({ browser }) => {
     const adminContext = await browser.newContext();
     const adminPage = await adminContext.newPage();
-    await signUpAndLogin(adminPage, `qa.loopy.stripe.wh.${stamp}@mailinator.com`, "QA Webhook");
+    await signUpAndLogin(adminPage, `qa.loopy.stripe.wh.${stamp}@mailinator.com`);
     const loopId = await createLoop(adminPage, `QA Webhook ${stamp}`);
 
     const fakeCustomerId = `cus_e2e_${stamp}`;
@@ -259,19 +263,86 @@ test.describe("Stripe billing", () => {
     await adminPage.goto(`/loop/${loopId}/familia`);
     await expect(adminPage).toHaveURL(new RegExp(`/loop/${loopId}/familia`));
 
+    // Una suscripción real que termina (ej. cancelada desde el portal de
+    // Stripe) manda a /suscripcion, no a /activar — a diferencia de un
+    // trial sin tarjeta vencido, esta persona ya está identificada (Stripe
+    // ya tiene su nombre/tarjeta de antes), no hace falta pedirle nada de
+    // nuevo.
+    const deletedEvent = {
+      id: `evt_e2e_del_${stamp}`,
+      object: "event",
+      type: "customer.subscription.deleted",
+      data: {
+        object: {
+          id: fakeSubscriptionId,
+          object: "subscription",
+          customer: fakeCustomerId,
+          status: "canceled",
+          metadata: { loop_id: loopId },
+        },
+      },
+    };
+    const deletedPayload = JSON.stringify(deletedEvent);
+    const deletedRes = await adminPage.request.post("/api/stripe/webhook", {
+      headers: { "stripe-signature": sign(deletedPayload), "content-type": "application/json" },
+      data: deletedPayload,
+    });
+    expect(deletedRes.ok()).toBeTruthy();
+
+    await adminPage.goto(`/loop/${loopId}/familia`);
+    await expect(adminPage).toHaveURL(new RegExp(`/loop/${loopId}/suscripcion`), { timeout: 15000 });
+
     await adminContext.close();
   });
 
-  test("un Loopy sin fila en loop_subscriptions rebota a /suscripcion", async ({ browser }) => {
+  test("un admin que ya usó su trial sin tarjeta no recibe otro al crear un segundo Loopy, y /activar guarda el nombre diferido", async ({ browser }) => {
     const context = await browser.newContext();
     const page = await context.newPage();
-    await signUpAndLogin(page, `qa.loopy.stripe.gate.${stamp}@mailinator.com`, "QA Gate");
-    const loopId = await createLoop(page, `QA Gate ${stamp}`);
+    await signUpAndLogin(page, `qa.loopy.stripe.gate.${stamp}@mailinator.com`);
 
-    // Renavegar explícito a /familia para confirmar el rebote incluso si
-    // createLoop ya había aterrizado directo en /suscripcion.
-    await page.goto(`/loop/${loopId}/familia`);
-    await expect(page).toHaveURL(new RegExp(`/loop/${loopId}/suscripcion`), { timeout: 15000 });
+    const firstLoopId = await createLoop(page, `QA Gate Uno ${stamp}`);
+
+    // Segundo Loopy, misma cuenta: vuelve al dashboard antes de crear otro.
+    await page.goto("/dashboard");
+    const secondLoopName = `QA Gate Dos ${stamp}`;
+    await page.getByPlaceholder(/nombre del loopy/i).fill(secondLoopName);
+    await page.getByRole("button", { name: "Crear Loopy" }).click();
+
+    // El segundo Loopy no es elegible (la cuenta ya usó su trial en el
+    // primero) — el gate lo manda directo a /activar, no a /familia.
+    await page.waitForURL(/\/loop\/[^/]+\/activar/, { timeout: 30000 });
+    const secondLoopId = page.url().match(/\/loop\/([^/]+)\//)?.[1];
+    expect(secondLoopId).toBeTruthy();
+    expect(secondLoopId).not.toBe(firstLoopId);
+    await expect(page.getByRole("heading", { name: "Activá tu Loopy" })).toBeVisible();
+
+    // Completar el formulario persiste el nombre diferido del alta, incluso
+    // si el pago real no se puede completar en este entorno de pruebas (sin
+    // STRIPE_PRICE_ID/STRIPE_SECRET_KEY reales configurados localmente).
+    await page.getByLabel("Nombre completo").fill("QA Activado");
+    await page.getByRole("button", { name: "Continuar al pago" }).click();
+    await Promise.race([
+      page.waitForURL((url) => !url.pathname.endsWith("/activar"), { timeout: 15000 }),
+      page.locator("p.text-red-600").waitFor({ timeout: 15000 }),
+    ]).catch(() => {});
+
+    const token = await getAccessToken(page);
+    expect(token).toBeTruthy();
+    const userId = await getUserId(page, token!);
+    expect(userId).toBeTruthy();
+    const profileRes = await page.request.get(
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${userId}&select=name`,
+      { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` } }
+    );
+    expect(profileRes.ok()).toBeTruthy();
+    const profileRows = await profileRes.json();
+    expect(profileRows).toHaveLength(1);
+    expect(profileRows[0].name).toBe("QA Activado");
+
+    // El primer Loopy, mientras tanto, sigue con acceso normal — su trial
+    // sigue vigente, esto no lo afecta.
+    await page.goto(`/loop/${firstLoopId}/familia`);
+    await expect(page).toHaveURL(new RegExp(`/loop/${firstLoopId}/familia`));
 
     await context.close();
   });

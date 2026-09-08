@@ -3,6 +3,7 @@ import { stripe } from "@/lib/stripeClient";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireLoopAdmin } from "@/lib/stripeAuth";
 import { isAdminBypassEmail } from "@/lib/adminBypass";
+import { resolveStripeCustomerId } from "@/lib/stripeCustomerId";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as { loopId?: string };
@@ -50,16 +51,22 @@ export async function POST(req: NextRequest) {
       .select("stripe_customer_id")
       .eq("loop_id", loopId)
       .maybeSingle();
+    const existingCustomerId = resolveStripeCustomerId(existingSub?.stripe_customer_id);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      customer: existingSub?.stripe_customer_id || undefined,
-      customer_email: existingSub?.stripe_customer_id ? undefined : auth.userEmail || undefined,
+      customer: existingCustomerId || undefined,
+      customer_email: existingCustomerId ? undefined : auth.userEmail || undefined,
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
         trial_period_days: 1,
         metadata: { loop_id: loopId },
       },
+      // Campo nativo de Stripe, opcional (sin `required`): solo colecta ID
+      // fiscal de EMPRESA (ej. es_cif — CIF español, no DNI personal), y
+      // Stripe decide solo cuándo mostrarlo según la ubicación de quien
+      // paga. Una familia lo deja en blanco y sigue de largo.
+      tax_id_collection: { enabled: true },
       client_reference_id: loopId,
       metadata: { loop_id: loopId },
       success_url: `${origin}/loop/${loopId}/familia?checkout=success`,

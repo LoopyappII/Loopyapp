@@ -84,7 +84,12 @@ export type SubscriptionStatus =
   // Estado local, nunca viene de Stripe: un admin en la lista de
   // ADMIN_BYPASS_EMAILS (ver app/api/stripe/checkout/route.ts) que crea o
   // usa un Loopy sin pasar por el pago real. Solo para pruebas/uso interno.
-  | "admin_bypass";
+  | "admin_bypass"
+  // Estado local, nunca viene de Stripe: el día gratis sin tarjeta que se
+  // activa al crear el primer Loopy (ver app/api/loops/start-trial/route.ts).
+  // A diferencia de "trialing" (que sí viene de Stripe y ya tiene tarjeta
+  // cargada), este vence de verdad — ver `trial_end` y `hasLoopAccess`.
+  | "trialing_no_card";
 
 export interface LoopSubscription {
   loop_id: string;
@@ -99,6 +104,32 @@ export interface LoopSubscription {
 
 const ACCESS_GRANTING_STATUSES: SubscriptionStatus[] = ["trialing", "active", "past_due", "admin_bypass"];
 
-export function hasLoopAccess(status: SubscriptionStatus | null | undefined): boolean {
-  return !!status && ACCESS_GRANTING_STATUSES.includes(status);
+// "trialing_no_card" queda deliberadamente fuera de ACCESS_GRANTING_STATUSES:
+// a diferencia de los demás estados de esta lista, este vence — necesita el
+// dato de tiempo (`trialEnd`), no solo el texto del estado. Agregarlo acá
+// directamente haría que el trial sin tarjeta nunca terminara.
+export function hasLoopAccess(
+  status: SubscriptionStatus | null | undefined,
+  trialEnd?: string | null
+): boolean {
+  if (!status) return false;
+  if (status === "trialing_no_card") {
+    return !!trialEnd && new Date(trialEnd) > new Date();
+  }
+  return ACCESS_GRANTING_STATUSES.includes(status);
+}
+
+// Para quien NO tiene acceso, decide a dónde mandarlo: /activar (nunca tuvo
+// suscripción, o tuvo un trial sin tarjeta que ya venció — falta nombre +
+// pago por primera vez) vs /suscripcion (ya tuvo una suscripción real de
+// Stripe alguna vez — reactivar/gestionar pago, sin volver a pedir nombre).
+export function needsActivation(
+  status: SubscriptionStatus | null | undefined,
+  trialEnd?: string | null
+): boolean {
+  if (!status) return true;
+  if (status === "trialing_no_card") {
+    return !trialEnd || new Date(trialEnd) <= new Date();
+  }
+  return false;
 }
