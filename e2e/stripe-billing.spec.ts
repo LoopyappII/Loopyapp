@@ -114,11 +114,10 @@ async function confirmEmailViaMailinator(page: Page, email: string) {
 }
 
 /**
- * app/signup/page.tsx's Nombre/Email/Contraseña inputs have <label> text but
- * no `placeholder` and no `for`/`id` pairing with their labels, so
- * getByPlaceholder/getByLabel can't find them. They're selected by `type`
- * (email/password) or, for the untyped Nombre input, by DOM order (it's the
- * form's first <input>, before the phone widget's inputs).
+ * app/signup/page.tsx's form has three inputs: Teléfono, Email, and Contraseña.
+ * Email and Contraseña have <label> text but no `placeholder` and no
+ * `for`/`id` pairing with their labels, so getByPlaceholder/getByLabel can't
+ * find them. All three inputs are selectable by `type` (tel, email, password).
  *
  * The Teléfono field is react-phone-number-input (PhoneInput), which renders
  * a country <select> plus a controlled <input type="tel" placeholder="+34
