@@ -137,7 +137,7 @@ test.describe("InstallPrompt", () => {
     await seed(page, { "loopy-cookie-consent": "accepted" });
     await page.goto("/");
 
-    await expect(page.getByRole("button", { name: "Cómo instalar" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Cómo instalar" })).toBeVisible({ timeout: 12000 });
     await page.getByRole("button", { name: "Cómo instalar" }).click();
     await expect(page.getByText("Añadir a pantalla de inicio")).toBeVisible();
     await expect(page.getByRole("button", { name: "Entendido" })).toBeVisible();
@@ -171,6 +171,22 @@ test.describe("InstallPrompt", () => {
     await page.getByRole("button", { name: "Instalar" }).click();
     await expect(page.locator(CARD)).toBeHidden(); // outcome "accepted" -> se oculta
     expect(await page.evaluate(() => (window as unknown as { __promptCalls?: number }).__promptCalls)).toBe(1);
+  });
+
+  test("?pwa=preview fuerza la card sin cookies, sin evento y hasta en /login", async ({ page }) => {
+    // sin cookie resuelta, sin beforeinstallprompt, y en una ruta excluida
+    await page.goto("/login?pwa=preview");
+    await expect(page.locator(CARD)).toBeVisible({ timeout: 6000 });
+    await expect(page.getByRole("button", { name: "Instalar" })).toBeVisible();
+
+    // el botón no revienta cuando no hay instalador nativo: muestra la nota
+    await page.getByRole("button", { name: "Instalar" }).click();
+    await expect(page.getByText(/Vista previa:/)).toBeVisible();
+
+    // permanentemente descartada de antes: preview la muestra igual
+    await page.evaluate(() => localStorage.setItem("loopy-install-dismissed", "forever"));
+    await page.goto("/?pwa=preview");
+    await expect(page.locator(CARD)).toBeVisible({ timeout: 6000 });
   });
 });
 

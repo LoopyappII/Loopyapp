@@ -10,6 +10,10 @@
 //   - la app no está ya instalada / abierta en standalone
 //   - el usuario no eligió "No volver a mostrar" (localStorage, permanente)
 //   - no está dentro de la ventana de "Ahora no" / X (localStorage, 7 días)
+//
+// Modo preview (`?pwa=preview` en la URL): fuerza la card a aparecer siempre,
+// salteando todas las reglas de arriba, para poder mostrarla/aprobarla sin
+// depender de que el navegador sea elegible para instalar. Ver isPreview().
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -20,6 +24,7 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export type InstallMode = "native" | "ios" | null;
+export type PromptResult = "native" | "unavailable";
 
 export const PERMANENT_KEY = "loopy-install-dismissed";
 export const SNOOZE_KEY = "loopy-install-snooze";
@@ -40,6 +45,14 @@ function writeLS(key: string, value: string): void {
   } catch {
     // Modo privado / almacenamiento deshabilitado: el ocultado queda solo
     // en memoria para esta sesión, que es aceptable.
+  }
+}
+
+function isPreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get("pwa") === "preview";
+  } catch {
+    return false;
   }
 }
 
@@ -77,7 +90,8 @@ function cookiesResolved(): boolean {
 export interface UseInstallPrompt {
   mode: InstallMode;
   visible: boolean;
-  promptInstall: () => Promise<void>;
+  previewMode: boolean;
+  promptInstall: () => Promise<PromptResult>;
   snooze: () => void;
   dismissForever: () => void;
 }
@@ -86,16 +100,21 @@ export function useInstallPrompt(): UseInstallPrompt {
   const [mode, setMode] = useState<InstallMode>(null);
   const [gateOpen, setGateOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
   const deferredRef = useRef<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    setPreviewMode(isPreview());
+  }, []);
 
   // Capturar el evento nativo y reaccionar a la instalación.
   useEffect(() => {
-    if (isStandalone() || permanentlyDismissed()) return;
+    if (!isPreview() && (isStandalone() || permanentlyDismissed())) return;
 
     const w = window as unknown as { __loopyBIP?: BeforeInstallPromptEvent | null };
 
-    // El script `beforeInteractive` de app/layout.tsx ya pudo haber
-    // capturado el evento antes de que montara este componente.
+    // El script inline de app/layout.tsx ya pudo haber capturado el evento
+    // antes de que montara este componente.
     function captureNative() {
       if (w.__loopyBIP) {
         deferredRef.current = w.__loopyBIP;
@@ -113,13 +132,14 @@ export function useInstallPrompt(): UseInstallPrompt {
     window.addEventListener("loopy:bip", captureNative);
     window.addEventListener("appinstalled", onAppInstalled);
 
-    // iOS nunca dispara `beforeinstallprompt`: si no llegó en ~1.2s y es un
-    // dispositivo iOS, se cae a la guía manual "Añadir a pantalla de inicio".
+    // iOS nunca dispara `beforeinstallprompt`: se cae a la guía manual
+    // "Añadir a pantalla de inicio". El pequeño margen es solo por si el
+    // script del <head> captura un evento tardío en algún navegador raro.
     let iosTimer: number | undefined;
     if (isIOS()) {
       iosTimer = window.setTimeout(() => {
         if (!deferredRef.current) setMode("ios");
-      }, 1200);
+      }, 600);
     }
 
     return () => {
@@ -134,6 +154,10 @@ export function useInstallPrompt(): UseInstallPrompt {
   // `storage` no dispara same-tab, así que se sondea (barato: una lectura
   // cada 800ms, se limpia apenas resuelve).
   useEffect(() => {
+    if (isPreview()) {
+      setGateOpen(true);
+      return;
+    }
     if (isStandalone() || permanentlyDismissed() || snoozed()) return;
 
     if (cookiesResolved()) {
@@ -159,9 +183,9 @@ export function useInstallPrompt(): UseInstallPrompt {
     setDismissed(true);
   }, []);
 
-  const promptInstall = useCallback(async () => {
+  const promptInstall = useCallback(async (): Promise<PromptResult> => {
     const deferred = deferredRef.current;
-    if (!deferred) return;
+    if (!deferred) return "unavailable";
     try {
       await deferred.prompt();
       const { outcome } = await deferred.userChoice;
@@ -173,12 +197,17 @@ export function useInstallPrompt(): UseInstallPrompt {
         writeLS(SNOOZE_KEY, String(Date.now() + SNOOZE_MS));
         setDismissed(true);
       }
+      return "native";
     } catch {
       setDismissed(true);
+      return "native";
     }
   }, []);
 
-  const visible = mode !== null && gateOpen && !dismissed;
+  // En preview, si no hay evento nativo capturado, mostramos igual la card
+  // como "native" (botón "Instalar") para que se vea el flujo principal.
+  const effectiveMode: InstallMode = previewMode && mode === null ? "native" : mode;
+  const visible = previewMode ? !dismissed : effectiveMode !== null && gateOpen && !dismissed;
 
-  return { mode, visible, promptInstall, snooze, dismissForever };
+  return { mode: effectiveMode, visible, previewMode, promptInstall, snooze, dismissForever };
 }
