@@ -8,6 +8,8 @@
 // - Safari iOS: botón "Cómo instalar" -> guía "Añadir a pantalla de inicio".
 // - X / "Ahora no": lo silencia 7 días.  "No volver a mostrar": permanente.
 // - No se muestra en /login ni /signup, ni si la app ya está instalada.
+// - `?pwa=preview` en la URL fuerza la card a aparecer siempre (para
+//   revisarla/aprobarla sin depender de que el navegador sea elegible).
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -81,23 +83,25 @@ function IosSteps({ onDone }: { onDone: () => void }) {
 export default function InstallPrompt() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
-  const { mode, visible, promptInstall, snooze, dismissForever } = useInstallPrompt();
+  const { mode, visible, previewMode, promptInstall, snooze, dismissForever } = useInstallPrompt();
   const [showIosSteps, setShowIosSteps] = useState(false);
+  const [previewNote, setPreviewNote] = useState(false);
 
   const onAuthRoute = AUTH_ROUTES.includes(pathname ?? "");
   const isLoopRoute = pathname?.startsWith("/loop/") ?? false;
-  const show = visible && !onAuthRoute;
+  const show = visible && (previewMode || !onAuthRoute);
 
   const enter = reduceMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : { initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 24 } };
 
-  function handlePrimary() {
+  async function handlePrimary() {
     if (mode === "ios") {
       setShowIosSteps(true);
       return;
     }
-    void promptInstall();
+    const result = await promptInstall();
+    if (result === "unavailable") setPreviewNote(true);
   }
 
   return (
@@ -166,7 +170,7 @@ export default function InstallPrompt() {
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <motion.button
                         type="button"
-                        onClick={handlePrimary}
+                        onClick={() => void handlePrimary()}
                         whileHover={reduceMotion ? undefined : { scale: 1.03 }}
                         whileTap={reduceMotion ? undefined : { scale: 0.97 }}
                         className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 px-5 py-2 text-sm font-semibold text-white shadow-cta transition-shadow hover:shadow-cta-hover"
@@ -182,6 +186,12 @@ export default function InstallPrompt() {
                         Ahora no
                       </button>
                     </div>
+
+                    {previewNote && (
+                      <p className="mt-2 text-[12px] leading-relaxed text-bridge">
+                        Vista previa: en un navegador compatible, esto abre el instalador.
+                      </p>
+                    )}
 
                     <button
                       type="button"
