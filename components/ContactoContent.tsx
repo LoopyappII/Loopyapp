@@ -7,7 +7,7 @@ import SiteFooter from "./SiteFooter";
 import { HatBadge } from "./LoopyLogo";
 import { fadeInUp, staggerContainer, revealOnce } from "@/lib/motion";
 
-const DIRECCION = "Avenida Dr. Pedro Guillén, 5, 30100 Murcia, España";
+const DIRECCION = "Av. Dr. Pedro Guillén, 5, 30100 Murcia, España";
 const MAPS_EMBED_SRC =
   "https://www.google.com/maps?q=Marla+Center,+Avenida+Dr.+Pedro+Guill%C3%A9n+5,+30100+Murcia&output=embed";
 const MAPS_LINK = "https://www.google.com/maps/search/?api=1&query=Marla+Center+Murcia";
