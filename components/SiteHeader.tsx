@@ -52,6 +52,12 @@ export default function SiteHeader() {
             >
               Guía de uso
             </Link>
+            <Link
+              href="/contacto"
+              className="px-3 py-1.5 text-sm text-loopy-700 font-medium hover:text-loopy-900 transition-colors"
+            >
+              Contacto
+            </Link>
           </nav>
 
           <nav className="flex items-center flex-wrap justify-center gap-2 sm:gap-3">
