@@ -15,6 +15,10 @@ export default function SiteFooter() {
         <Link href="/terminos" className="hover:text-loopy-900 transition-colors underline underline-offset-2">
           Términos y condiciones
         </Link>
+        <span className="text-loopy-700/30">·</span>
+        <Link href="/contacto" className="hover:text-loopy-900 transition-colors underline underline-offset-2">
+          Contacto
+        </Link>
       </div>
     </footer>
   );
