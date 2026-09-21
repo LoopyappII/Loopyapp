@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { fadeInUp } from "@/lib/motion";
+import { acceptInvite } from "@/lib/loopBootstrap";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get("invite");
+  const pmId = searchParams.get("pm");
+  const hasInvite = !!(inviteCode && pmId);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,14 +33,22 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
+    }
+
+    if (hasInvite && data.session) {
+      const accepted = await acceptInvite(pmId!, inviteCode!, data.session.access_token);
+      if ("loopId" in accepted) {
+        router.push(`/loop/${accepted.loopId}/mapa`);
+        return;
+      }
     }
     router.push("/dashboard");
   }
@@ -39,7 +61,7 @@ export default function LoginPage() {
         </Link>
         <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
           <Link
-            href="/signup"
+            href={hasInvite ? `/signup?invite=${inviteCode}&pm=${pmId}` : "/signup"}
             className="px-4 py-2 rounded-full bg-gradient-to-r from-loopy-700 via-bridge to-glow-500 text-white font-medium shadow-cta hover:shadow-cta-hover inline-block"
           >
             Crear cuenta
@@ -62,7 +84,9 @@ export default function LoginPage() {
               Bienvenido de nuevo
             </h1>
             <p className="text-sm text-loopy-700 text-center mt-1">
-              Accede para ver tus Loopys y tu ubicación en tiempo real.
+              {hasInvite
+                ? "Accede para aceptar tu invitación y compartir ubicación."
+                : "Accede para ver tus Loopys y tu ubicación en tiempo real."}
             </p>
           </div>
 
@@ -102,7 +126,7 @@ export default function LoginPage() {
             </motion.button>
             <p className="text-sm text-loopy-700 mt-4 text-center">
               ¿No tienes cuenta?{" "}
-              <Link href="/signup" className="text-bridge font-medium">
+              <Link href={hasInvite ? `/signup?invite=${inviteCode}&pm=${pmId}` : "/signup"} className="text-bridge font-medium">
                 Crea una
               </Link>
             </p>
