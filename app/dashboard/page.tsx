@@ -8,7 +8,7 @@ import { LogOut, Plus, KeyRound } from "lucide-react";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { SkeletonCard } from "@/components/Skeleton";
 import { supabase } from "@/lib/supabaseClient";
-import type { Loop, LoopMode } from "@/lib/types";
+import type { Loop } from "@/lib/types";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 
 export default function DashboardPage() {
@@ -18,7 +18,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const [newLoopName, setNewLoopName] = useState("");
-  const [newLoopMode, setNewLoopMode] = useState<LoopMode>("mirror");
   const [creating, setCreating] = useState(false);
 
   const [joinCode, setJoinCode] = useState("");
@@ -65,7 +64,7 @@ export default function DashboardPage() {
     setFormError(null);
     const { data: loop, error } = await supabase
       .from("loops")
-      .insert({ name: newLoopName, mode: newLoopMode, admin_id: userId })
+      .insert({ name: newLoopName, mode: "mirror", admin_id: userId })
       .select()
       .single();
 
@@ -109,7 +108,7 @@ export default function DashboardPage() {
         await callStartTrial();
       }
     }
-    router.push(`/loop/${loop.id}/familia`);
+    router.push(`/loop/${loop.id}/mapa`);
   }
 
   async function handleJoinLoop(e: React.FormEvent) {
@@ -144,9 +143,8 @@ export default function DashboardPage() {
       return;
     }
 
-    setJoinCode("");
-    await loadLoops(userId);
     setJoining(false);
+    router.push(`/loop/${loop.id}/mapa`);
   }
 
   async function handleLogout() {
@@ -235,19 +233,11 @@ export default function DashboardPage() {
             </h2>
             <input
               placeholder="Nombre del Loopy"
-              className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 focus:outline-none focus:ring-2 focus:ring-bridge/60"
+              className="w-full mb-4 px-3 py-2 rounded-lg border border-loopy-50 focus:outline-none focus:ring-2 focus:ring-bridge/60"
               value={newLoopName}
               onChange={(e) => setNewLoopName(e.target.value)}
               required
             />
-            <select
-              className="w-full mb-4 px-3 py-2 rounded-lg border border-loopy-50"
-              value={newLoopMode}
-              onChange={(e) => setNewLoopMode(e.target.value as LoopMode)}
-            >
-              <option value="mirror">Modo Espejo (todos se ven)</option>
-              <option value="supervision">Modo Supervisión (roles)</option>
-            </select>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
