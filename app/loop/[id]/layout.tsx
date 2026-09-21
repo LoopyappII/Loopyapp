@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { haversineMeters } from "@/lib/geo";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import type { MapMember } from "@/components/LiveMap";
-import type { Loop, LoopMember, MemberRole, SafeZone, SpeedAlert, SubscriptionStatus } from "@/lib/types";
+import type { Loop, LoopMember, LoopMode, MemberRole, SafeZone, SpeedAlert, SubscriptionStatus } from "@/lib/types";
 import { hasLoopAccess, needsActivation } from "@/lib/types";
 import BottomTabBar from "@/components/loop/BottomTabBar";
 import { LoopContext, type LoopContextValue, type ZoneEventRow } from "./LoopContext";
@@ -374,6 +374,8 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
   }
 
   async function saveLoopSettings(
+    name: string,
+    mode: LoopMode,
     speedLimitKmh: number | null,
     emergencyNumber: string | null,
     primaryContactNumber: string | null
@@ -381,6 +383,8 @@ export default function LoopLayout({ children }: { children: React.ReactNode }) 
     const { data, error } = await supabase
       .from("loops")
       .update({
+        name,
+        mode,
         speed_limit_kmh: speedLimitKmh,
         emergency_number: emergencyNumber,
         primary_contact_number: primaryContactNumber,
