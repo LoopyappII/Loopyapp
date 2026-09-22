@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useLoop } from "../LoopContext";
+import type { LoopMode } from "@/lib/types";
 
 export default function AjustesPage() {
   const { loop, isAdmin, saveLoopSettings } = useLoop();
+  const [nameInput, setNameInput] = useState(loop.name);
+  const [modeInput, setModeInput] = useState<LoopMode>(loop.mode);
   const [speedLimitInput, setSpeedLimitInput] = useState(loop.speed_limit_kmh?.toString() || "");
   const [emergencyNumberInput, setEmergencyNumberInput] = useState(loop.emergency_number || "");
   const [primaryContactInput, setPrimaryContactInput] = useState(loop.primary_contact_number || "");
@@ -16,6 +19,8 @@ export default function AjustesPage() {
     setSaving(true);
     setError(null);
     const { error } = await saveLoopSettings(
+      nameInput,
+      modeInput,
       speedLimitInput ? Number(speedLimitInput) : null,
       emergencyNumberInput || null,
       primaryContactInput || null
@@ -36,6 +41,23 @@ export default function AjustesPage() {
       {isAdmin ? (
         <form onSubmit={handleSave} className="bg-white rounded-xl border border-loopy-100 shadow-card md:shadow-card-hover p-4 md:p-6">
           <h2 className="font-bold text-loopy-900 mb-2">Configuración del Loopy</h2>
+          <label className="block text-xs text-loopy-700/70 mb-1">Nombre del Loopy</label>
+          <input
+            placeholder="Nombre del Loopy"
+            className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 text-sm focus:outline-none focus:ring-2 focus:ring-bridge/60"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            required
+          />
+          <label className="block text-xs text-loopy-700/70 mb-1">Modo</label>
+          <select
+            className="w-full mb-3 px-3 py-2 rounded-lg border border-loopy-50 text-sm"
+            value={modeInput}
+            onChange={(e) => setModeInput(e.target.value as LoopMode)}
+          >
+            <option value="mirror">Modo Espejo (todos se ven)</option>
+            <option value="supervision">Modo Supervisión (roles)</option>
+          </select>
           <label className="block text-xs text-loopy-700/70 mb-1">Límite de velocidad (km/h)</label>
           <input
             type="number"

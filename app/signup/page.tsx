@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
@@ -10,15 +10,43 @@ import "react-phone-number-input/style.css";
 import { supabase } from "@/lib/supabaseClient";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { fadeInUp, scaleIn } from "@/lib/motion";
+import { acceptInvite, createDefaultLoop } from "@/lib/loopBootstrap";
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteCode = searchParams.get("invite");
+  const pmId = searchParams.get("pm");
+  const hasInvite = !!(inviteCode && pmId);
+
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+
+  async function resolveDestination(
+    userId: string,
+    accessToken: string
+  ): Promise<{ path: string } | { error: string }> {
+    if (hasInvite) {
+      const accepted = await acceptInvite(pmId!, inviteCode!, accessToken);
+      if ("loopId" in accepted) return { path: `/loop/${accepted.loopId}/mapa` };
+      return { error: accepted.error };
+    }
+    const created = await createDefaultLoop(userId, accessToken);
+    if ("loopId" in created) return { path: `/loop/${created.loopId}/mapa` };
+    return { path: "/dashboard" };
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,25 +56,37 @@ export default function SignupPage() {
     }
     setLoading(true);
     setError(null);
+    const loginUrl = hasInvite
+      ? `https://www.directloopy.com/login?invite=${encodeURIComponent(inviteCode!)}&pm=${encodeURIComponent(pmId!)}`
+      : "https://www.directloopy.com/login";
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { phone },
-        emailRedirectTo: "https://www.directloopy.com/login",
+        emailRedirectTo: loginUrl,
       },
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
     if (data.session) {
-      router.push("/dashboard");
-    } else {
-      setDone(true);
+      const destination = await resolveDestination(data.user!.id, data.session.access_token);
+      if ("error" in destination) {
+        setLoading(false);
+        setError(destination.error);
+        return;
+      }
+      router.push(destination.path);
+      return;
     }
+    setLoading(false);
+    setDone(true);
   }
+
+  const loginHref = hasInvite ? `/login?invite=${inviteCode}&pm=${pmId}` : "/login";
 
   return (
     <main className="relative min-h-screen flex flex-col">
@@ -55,7 +95,7 @@ export default function SignupPage() {
           <NavbarLogo size={32} dark />
         </Link>
         <Link
-          href="/login"
+          href={loginHref}
           className="px-4 py-2 text-loopy-700 font-medium hover:text-loopy-900 transition-colors"
         >
           Acceder
@@ -85,7 +125,7 @@ export default function SignupPage() {
               Revisa tu email para confirmar la cuenta antes de acceder.
             </p>
             <Link
-              href="/login"
+              href={loginHref}
               className="text-bridge font-medium mt-4 inline-block"
             >
               Ir a acceder
@@ -103,10 +143,12 @@ export default function SignupPage() {
                 Crear cuenta
               </span>
               <h1 className="text-2xl font-extrabold text-loopy-900 text-center">
-                Súmate a Loopy
+                {hasInvite ? "Te invitaron a un Loopy" : "Súmate a Loopy"}
               </h1>
               <p className="text-sm text-loopy-700 text-center mt-1">
-                Gratis el primer día, 14,99€/mes después.
+                {hasInvite
+                  ? "Crea tu cuenta para aceptar la invitación y compartir ubicación."
+                  : "Gratis el primer día, 14,99€/mes después."}
               </p>
             </div>
 
@@ -169,7 +211,7 @@ export default function SignupPage() {
               </p>
               <p className="text-sm text-loopy-700 mt-4 text-center">
                 ¿Ya tienes cuenta?{" "}
-                <Link href="/login" className="text-bridge font-medium">
+                <Link href={loginHref} className="text-bridge font-medium">
                   Accede
                 </Link>
               </p>

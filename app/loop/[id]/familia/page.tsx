@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Route as RouteIcon, UserPlus, Pencil, X, Check, Copy, MapPin } from "lucide-react";
+import { Route as RouteIcon, UserPlus, Pencil, X, Check, Copy, MapPin, MessageCircle } from "lucide-react";
 import PhoneInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { useLoop, roleLabel } from "../LoopContext";
 import { MEMBER_COLOR_OPTIONS, getMemberGradient } from "@/lib/memberColors";
 import LocationPicker from "@/components/LocationPicker";
-import type { MemberRole } from "@/lib/types";
+import type { LoopMember, MemberRole } from "@/lib/types";
 
 export default function FamiliaPage() {
   const {
@@ -52,6 +52,14 @@ export default function FamiliaPage() {
     } catch {
       setCopyError(true);
     }
+  }
+
+  function handleSendWhatsApp(member: LoopMember) {
+    if (!member.pending_phone) return;
+    const digits = member.pending_phone.replace(/[^0-9]/g, "");
+    const inviteUrl = `https://www.directloopy.com/signup?invite=${loop.invite_code}&pm=${member.id}`;
+    const text = `Te invité a mi Loopy para compartir ubicación 💙 Aceptá acá: ${inviteUrl}`;
+    window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
   }
 
   async function handleSaveAge(e: React.FormEvent) {
@@ -226,6 +234,17 @@ export default function FamiliaPage() {
                       className="w-6 h-6 rounded-full flex items-center justify-center text-loopy-700/50 hover:bg-loopy-50 hover:text-bridge"
                     >
                       <Pencil size={12} />
+                    </button>
+                  )}
+                  {isPending && isAdmin && m.pending_phone && (
+                    <button
+                      type="button"
+                      onClick={() => handleSendWhatsApp(m)}
+                      aria-label={`Enviar invitación por WhatsApp a ${displayName}`}
+                      title="Enviar por WhatsApp"
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-loopy-700/50 hover:bg-green-50 hover:text-green-600"
+                    >
+                      <MessageCircle size={12} />
                     </button>
                   )}
                   {isPending && isAdmin && (

@@ -215,14 +215,36 @@ async function signUpAndLogin(page: Page, email: string, phone: string = "+34600
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.getByRole("button", { name: "Crear cuenta" }).click();
 
-  const wentToDashboard = await page
-    .waitForURL(/\/dashboard/, { timeout: 15000 })
+  // Organic signup (no invite/pm params) now auto-creates a default Loopy
+  // and lands directly on its map (app/signup/page.tsx's
+  // resolveDestination -> createDefaultLoop) instead of /dashboard.
+  const wentDirect = await page
+    .waitForURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 })
     .then(() => true)
     .catch(() => false);
 
-  if (!wentToDashboard) {
+  if (!wentDirect) {
     // Confirmation required: app/signup/page.tsx shows the "revisa tu
-    // email" card instead of redirecting (data.session was null).
+    // email" card instead of redirecting (data.session was null). This is
+    // the ONLY branch this live Supabase project's signups ever take (its
+    // "Confirm email" setting is unconditionally ON — see this file's
+    // header comment). app/login/page.tsx's handleSubmit now mirrors
+    // signup's resolveDestination for exactly this case: a plain login (no
+    // invite/pm params) checks loop_members for this user and, only if it's
+    // empty, calls createDefaultLoop and lands on that Loopy's map — a
+    // returning/already-linked user is left landing on /dashboard exactly
+    // as before (deliberate, scoped fix; see app/login/page.tsx).
+    //
+    // Which of the two this lands on is data-dependent, not flaky: most
+    // callers in this file are a genuinely first-ever login (zero
+    // loop_members -> /loop/.../mapa), but the phone-auto-link sub-flow
+    // below signs a user up whose phone already matches a pending member
+    // added by another admin — Postgres links that membership at signUp()
+    // time (before this login even runs), so that user already has 1+
+    // loop_members by the time they log in and correctly stays on
+    // /dashboard, same as any returning user. Accept either here; callers
+    // that need a specific destination assert or navigate explicitly
+    // themselves right after this helper returns.
     await expect(page.getByText("¡Cuenta creada!")).toBeVisible({ timeout: 5000 });
     await confirmEmailViaMailinator(page, email);
 
@@ -230,7 +252,7 @@ async function signUpAndLogin(page: Page, email: string, phone: string = "+34600
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(PASSWORD);
     await page.getByRole("button", { name: "Acceder" }).click();
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/dashboard|\/loop\/[^/]+\/mapa/, { timeout: 15000 });
   }
 }
 
@@ -270,39 +292,51 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
     await signUpAndLogin(page1, USER1.email);
     await signUpAndLogin(page2, USER2.email);
 
-    // Create a Loopy from user1's dashboard. Creating does NOT auto-navigate
-    // (app/dashboard/page.tsx's handleCreateLoop only inserts + reloads the
-    // list) — the new Loopy shows up as a link in "Tus Loopys" that we then
-    // click ourselves.
-    const loopName = `QA Shell ${stamp}`;
-    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-    await page1.getByRole("button", { name: "Crear Loopy" }).click();
-
-    const loopLink1 = page1.locator("a", { hasText: loopName });
-    await expect(loopLink1).toBeVisible({ timeout: 10000 });
-    const href = await loopLink1.getAttribute("href");
-    loopId = href?.match(/\/loop\/([^/]+)\//)?.[1];
+    // Each account already has its own auto-created "Mi Loopy" from
+    // signUpAndLogin, and each landed directly on its own map. This test
+    // wants a specific, known name to assert on later ("QA Shell ...") —
+    // rename page1's auto-created Loopy via Ajustes instead of creating a
+    // brand-new second one: a second Loopy would need a real paid
+    // subscription (one free trial per account, already spent by
+    // signUpAndLogin's auto-create — see
+    // app/api/loops/start-trial/route.ts's per-admin eligibility check),
+    // which this environment has no Stripe credentials to exercise.
+    await expect(page1).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
+    loopId = page1.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
     expect(loopId).toBeTruthy();
 
-    const linkText = await loopLink1.innerText();
-    const inviteCode = linkText.match(/Código:\s*(\S+)/)?.[1];
-    expect(inviteCode).toBeTruthy();
+    const loopName = `QA Shell ${stamp}`;
+    await page1.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await page1.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes1] = await Promise.all([
+      page1.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      page1.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes1.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
 
-    // Enter via the bare loop id (not the dashboard link, whose href already
-    // points straight at /mapa) so app/loop/[id]/page.tsx's redirect to
-    // /mapa actually runs at least once (Finding 7 item 1: this redirect had
-    // zero coverage before, since every other entry point in this suite
-    // targets a sub-path directly).
+    // app/loop/[id]/page.tsx's bare-id redirect to /mapa still deserves
+    // coverage.
     await page1.goto(`/loop/${loopId}`);
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
-    // user2 joins with the invite code — same "no auto-navigate" behavior.
+    // Read the invite code from Familia (shown there for a fresh Loopy with
+    // <=1 member).
+    await page1.getByRole("link", { name: "Familia", exact: true }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
+    const codeText = await page1.getByText(/Compartí este código:/).innerText();
+    const inviteCode = codeText.match(/Compartí este código:\s*(\S+)/)?.[1];
+    expect(inviteCode).toBeTruthy();
+    await page1.getByRole("link", { name: "Mapa", exact: true }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa$`));
+
+    // user2 joins with the invite code from /dashboard — also now
+    // auto-navigates straight to the loop's map.
+    await page2.goto("/dashboard");
     await page2.getByPlaceholder(/código de invitación/i).fill(inviteCode!);
     await page2.getByRole("button", { name: "Unirme" }).click();
-
-    const loopLink2 = page2.locator("a", { hasText: loopName });
-    await expect(loopLink2).toBeVisible({ timeout: 10000 });
-    await loopLink2.click();
     await expect(page2).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
     // Tab navigation preserves loop id, doesn't get stuck loading, and each
@@ -430,16 +464,24 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
   try {
     await signUpAndLogin(page1, `qa.loopy1b.${stamp}@mailinator.com`);
 
-    const loopName = `QA Familia ${stamp}`;
-    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-    await page1.getByRole("button", { name: "Crear Loopy" }).click();
-    const loopLink = page1.locator("a", { hasText: loopName });
-    await expect(loopLink).toBeVisible({ timeout: 10000 });
-    const href = await loopLink.getAttribute("href");
-    loopId = href?.match(/\/loop\/([^/]+)\//)?.[1];
+    // Rename the auto-created default Loopy instead of creating a second
+    // one — see the "nav shell" test's comment above for the full
+    // explanation (one free trial per account, already spent).
+    await expect(page1).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
+    loopId = page1.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
     expect(loopId).toBeTruthy();
-    await loopLink.click();
-    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
+
+    const loopName = `QA Familia ${stamp}`;
+    await page1.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await page1.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes] = await Promise.all([
+      page1.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      page1.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
 
     await page1.getByRole("link", { name: "Familia", exact: true }).click();
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
@@ -491,6 +533,12 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
     await expect(page1.getByText("QA Auto Placeholder")).toBeVisible({ timeout: 10000 });
 
     await signUpAndLogin(page2, USER3.email, AUTO_LINK_PHONE);
+    // USER3's own signup auto-created a separate "Mi Loopy" (Task 4) on top
+    // of the phone-trigger auto-link into "QA Familia" — that second Loopy
+    // is untracked test debris this suite already accepts for the two
+    // mailinator accounts themselves (see cleanupTestData's doc comment);
+    // navigate to /dashboard explicitly to see the shared loop as a link.
+    await page2.goto("/dashboard");
     await expect(page2.locator("a", { hasText: loopName })).toBeVisible({ timeout: 15000 });
 
     await page1.reload();
@@ -514,5 +562,185 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
     }
     await ctx1.close().catch(() => {});
     await ctx2.close().catch(() => {});
+  }
+});
+
+test("signup: organic account auto-creates a default Loopy and lands on its map", async ({ browser }) => {
+  const ctx = await browser.newContext();
+  await ctx.addInitScript(() => localStorage.setItem("loopy-cookie-consent", "accepted"));
+  const page = await ctx.newPage();
+  await grantGeo(ctx, 40.4168, -3.7038);
+
+  const email = `qa.loopy.organic.${stamp}@mailinator.com`;
+  let loopId: string | undefined;
+
+  try {
+    await signUpAndLogin(page, email);
+    await expect(page).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
+    loopId = page.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
+    expect(loopId).toBeTruthy();
+
+    // Auto-created default Loopy: name "Mi Loopy", Modo Espejo — no mode
+    // picker was ever shown during signup.
+    await page.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await expect(page.getByPlaceholder("Nombre del Loopy")).toHaveValue("Mi Loopy");
+    // "Modo Espejo" also appears verbatim inside the mode <select>'s own
+    // <option> (app/loop/[id]/ajustes/page.tsx) — a plain text locator
+    // matches both and trips Playwright's strict mode. Match the summary
+    // <p> ("Modo Espejo · Código: ...") specifically instead.
+    await expect(page.locator("p", { hasText: "Modo Espejo · Código:" })).toBeVisible();
+  } finally {
+    if (loopId) {
+      await cleanupTestData(page, page, loopId).catch((err) => {
+        console.warn(
+          `[e2e cleanup] best-effort cleanup failed (non-fatal): ${
+            err instanceof Error ? err.message : err
+          }`
+        );
+      });
+    }
+    await ctx.close().catch(() => {});
+  }
+});
+
+test("invite: admin adds pending member, guest accepts via invite link and gets linked", async ({ browser }) => {
+  const ctxAdmin = await browser.newContext();
+  await ctxAdmin.addInitScript(() => localStorage.setItem("loopy-cookie-consent", "accepted"));
+  const pageAdmin = await ctxAdmin.newPage();
+  await grantGeo(ctxAdmin, 40.4168, -3.7038);
+
+  const ctxGuest = await browser.newContext();
+  await ctxGuest.addInitScript(() => localStorage.setItem("loopy-cookie-consent", "accepted"));
+  const pageGuest = await ctxGuest.newPage();
+  await grantGeo(ctxGuest, 40.417, -3.704);
+
+  // Email local-parts deliberately avoid the word "admin": live-verified
+  // via a clean paired A/B test (two signUp() calls seconds apart, direct
+  // curl against Supabase's /auth/v1/signup, bypassing Playwright/mailer
+  // rate limits entirely — both returned confirmation_sent_at) that
+  // mailinator silently drops confirmation emails whose local-part
+  // contains "admin" (qa.loopy.cleanadmin.*@mailinator.com: never
+  // arrived) while an otherwise-identical address without it
+  // (qa.loopy.cleanplain.*@mailinator.com) delivered in ~4 seconds. Not a
+  // Supabase or app bug, and not rate limiting (every other test's
+  // addresses, queried moments before/after, deliver fine) — some
+  // spam/content filter in the mailinator delivery path keying off that
+  // word, most likely because "admin" is a common phishing lure. "wa"
+  // (WhatsApp) below is arbitrary, just "admin"-free.
+  const adminEmail = `qa.loopy.wahost.${stamp}@mailinator.com`;
+  const guestEmail = `qa.loopy.waguest.${stamp}@mailinator.com`;
+
+  let loopId: string | undefined;
+
+  try {
+    await signUpAndLogin(pageAdmin, adminEmail);
+
+    // Rename the auto-created default Loopy instead of creating a second
+    // one — see the "nav shell" test's comment for the full explanation
+    // (one free trial per account, already spent).
+    await expect(pageAdmin).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
+    loopId = pageAdmin.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
+    expect(loopId).toBeTruthy();
+
+    const loopName = `QA Invite ${stamp}`;
+    await pageAdmin.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(pageAdmin).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await pageAdmin.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes] = await Promise.all([
+      pageAdmin.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      pageAdmin.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
+
+    await pageAdmin.getByRole("link", { name: "Familia", exact: true }).click();
+    await expect(pageAdmin).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
+
+    await pageAdmin.getByRole("button", { name: "Agregar miembro" }).click();
+    await pageAdmin.locator('input[placeholder="Nombre"]').fill("QA Invite Guest");
+    await pageAdmin.locator('input[type="tel"]').pressSequentially("+34688777666", { delay: 20 });
+    await pageAdmin.getByRole("button", { name: "Agregar", exact: true }).click();
+    await expect(pageAdmin.getByText("QA Invite Guest")).toBeVisible({ timeout: 10000 });
+
+    // Stub window.open on the admin's page instead of driving a real
+    // WhatsApp popup (unreliable across browser engines, especially with
+    // noopener) — this proves the button builds the right wa.me URL
+    // without depending on WhatsApp's own site at all.
+    await pageAdmin.evaluate(() => {
+      (window as unknown as { __capturedWaUrl: string | null }).__capturedWaUrl = null;
+      window.open = ((url?: string | URL) => {
+        (window as unknown as { __capturedWaUrl: string | null }).__capturedWaUrl = String(url);
+        return null;
+      }) as typeof window.open;
+    });
+    await pageAdmin
+      .getByRole("button", { name: "Enviar invitación por WhatsApp a QA Invite Guest" })
+      .click();
+    const waUrlStr = await pageAdmin.evaluate(
+      () => (window as unknown as { __capturedWaUrl: string | null }).__capturedWaUrl
+    );
+    expect(waUrlStr).toBeTruthy();
+    const waUrl = new URL(waUrlStr!);
+    expect(waUrl.hostname).toBe("wa.me");
+    const waText = waUrl.searchParams.get("text") || "";
+    const inviteLinkMatch = waText.match(/https:\/\/www\.directloopy\.com\/signup\?invite=\S+/);
+    expect(inviteLinkMatch, "WhatsApp message should embed the invite link").toBeTruthy();
+    const inviteUrl = new URL(inviteLinkMatch![0]);
+    const inviteCode = inviteUrl.searchParams.get("invite");
+    const pmId = inviteUrl.searchParams.get("pm");
+    expect(inviteCode).toBeTruthy();
+    expect(pmId).toBeTruthy();
+
+    // Guest opens the app's own /signup?invite=&pm= — the same path the
+    // real WhatsApp link points at (directloopy.com doesn't resolve from
+    // this test run, so we hit the local app directly with the same query
+    // string instead of following the https://www.directloopy.com host).
+    await pageGuest.goto(`/signup?invite=${inviteCode}&pm=${pmId}`);
+    await expect(pageGuest.getByRole("heading", { name: "Te invitaron a un Loopy" })).toBeVisible();
+    await pageGuest.locator('input[type="tel"]').pressSequentially("+34688777666", { delay: 20 });
+    await pageGuest.locator('input[type="email"]').fill(guestEmail);
+    await pageGuest.locator('input[type="password"]').fill(PASSWORD);
+    await pageGuest.getByRole("button", { name: "Crear cuenta" }).click();
+
+    const wentDirect = await pageGuest
+      .waitForURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 15000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!wentDirect) {
+      // Confirmation required — the confirm link must carry invite/pm
+      // through emailRedirectTo, and login must complete the acceptance
+      // instead of landing on /dashboard.
+      await expect(pageGuest.getByText("¡Cuenta creada!")).toBeVisible({ timeout: 5000 });
+      await confirmEmailViaMailinator(pageGuest, guestEmail);
+
+      await pageGuest.goto(`/login?invite=${inviteCode}&pm=${pmId}`);
+      await pageGuest.locator('input[type="email"]').fill(guestEmail);
+      await pageGuest.locator('input[type="password"]').fill(PASSWORD);
+      await pageGuest.getByRole("button", { name: "Acceder" }).click();
+      await expect(pageGuest).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 15000 });
+    }
+
+    // Back on the admin's Familia tab: the pending row is now a real,
+    // linked member — no more "Invitado" badge, and the member count is
+    // admin + guest = 2.
+    await pageAdmin.reload();
+    await expect(pageAdmin.getByText("QA Invite Guest")).toHaveCount(0);
+    await expect(pageAdmin.getByText("Invitado", { exact: true })).toHaveCount(0);
+    await expect(pageAdmin.getByRole("listitem")).toHaveCount(2, { timeout: 10000 });
+  } finally {
+    if (loopId) {
+      await cleanupTestData(pageAdmin, pageGuest, loopId).catch((err) => {
+        console.warn(
+          `[e2e cleanup] best-effort cleanup failed (non-fatal): ${
+            err instanceof Error ? err.message : err
+          }`
+        );
+      });
+    }
+    await ctxAdmin.close().catch(() => {});
+    await ctxGuest.close().catch(() => {});
   }
 });

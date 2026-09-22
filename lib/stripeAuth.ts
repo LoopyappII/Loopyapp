@@ -68,3 +68,30 @@ export async function requireLoopAdmin(
 
   return { ok: true, userId: userData.user.id, userEmail: userData.user.email ?? null, loop };
 }
+
+export type AuthedUserResult =
+  | { ok: true; userId: string; userEmail: string | null }
+  | { ok: false; status: number; error: string };
+
+/**
+ * Verifica el Bearer token del caller contra Supabase Auth, sin exigir
+ * que sea admin de ningún Loopy — lo usan rutas donde cualquier cuenta
+ * autenticada puede actuar (p.ej. aceptar una invitación).
+ */
+export async function requireAuthedUser(req: NextRequest): Promise<AuthedUserResult> {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.replace(/^Bearer\s+/i, "");
+  if (!token) {
+    return { ok: false, status: 401, error: "No autenticado" };
+  }
+
+  const supabaseAsUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data: userData, error: userError } = await supabaseAsUser.auth.getUser(token);
+  if (userError || !userData.user) {
+    return { ok: false, status: 401, error: "No autenticado" };
+  }
+
+  return { ok: true, userId: userData.user.id, userEmail: userData.user.email ?? null };
+}
