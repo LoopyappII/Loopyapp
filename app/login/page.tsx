@@ -54,11 +54,11 @@ function LoginForm() {
       // entra (cero Loopys), le creamos el Loopy por defecto y lo mandamos
       // directo al mapa, igual que a un registro nuevo. Un usuario que ya
       // tiene Loopys sigue yendo a /dashboard exactamente como hoy.
-      const { data: memberships } = await supabase
+      const { data: memberships, error: membershipsError } = await supabase
         .from("loop_members")
         .select("loop_id")
         .eq("user_id", data.session.user.id);
-      if ((memberships || []).length === 0) {
+      if (!membershipsError && (memberships || []).length === 0) {
         const created = await createDefaultLoop(data.session.user.id, data.session.access_token);
         if ("loopId" in created) {
           router.push(`/loop/${created.loopId}/mapa`);
