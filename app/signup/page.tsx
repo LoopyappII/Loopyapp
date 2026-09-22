@@ -34,14 +34,18 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  async function resolveDestination(userId: string, accessToken: string): Promise<string> {
+  async function resolveDestination(
+    userId: string,
+    accessToken: string
+  ): Promise<{ path: string } | { error: string }> {
     if (hasInvite) {
       const accepted = await acceptInvite(pmId!, inviteCode!, accessToken);
-      if ("loopId" in accepted) return `/loop/${accepted.loopId}/mapa`;
+      if ("loopId" in accepted) return { path: `/loop/${accepted.loopId}/mapa` };
+      return { error: accepted.error };
     }
     const created = await createDefaultLoop(userId, accessToken);
-    if ("loopId" in created) return `/loop/${created.loopId}/mapa`;
-    return "/dashboard";
+    if ("loopId" in created) return { path: `/loop/${created.loopId}/mapa` };
+    return { path: "/dashboard" };
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -70,7 +74,12 @@ function SignupForm() {
     }
     if (data.session) {
       const destination = await resolveDestination(data.user!.id, data.session.access_token);
-      router.push(destination);
+      if ("error" in destination) {
+        setLoading(false);
+        setError(destination.error);
+        return;
+      }
+      router.push(destination.path);
       return;
     }
     setLoading(false);

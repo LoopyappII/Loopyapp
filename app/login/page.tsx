@@ -49,6 +49,9 @@ function LoginForm() {
         router.push(`/loop/${accepted.loopId}/mapa`);
         return;
       }
+      setLoading(false);
+      setError(accepted.error);
+      return;
     } else if (data.session) {
       // Sin contexto de invitación: si es la primera vez que este usuario
       // entra (cero Loopys), le creamos el Loopy por defecto y lo mandamos

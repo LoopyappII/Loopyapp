@@ -699,7 +699,7 @@ test("invite: admin adds pending member, guest accepts via invite link and gets 
     // string instead of following the https://www.directloopy.com host).
     await pageGuest.goto(`/signup?invite=${inviteCode}&pm=${pmId}`);
     await expect(pageGuest.getByRole("heading", { name: "Te invitaron a un Loopy" })).toBeVisible();
-    await pageGuest.locator('input[type="tel"]').pressSequentially("+34600111222", { delay: 20 });
+    await pageGuest.locator('input[type="tel"]').pressSequentially("+34688777666", { delay: 20 });
     await pageGuest.locator('input[type="email"]').fill(guestEmail);
     await pageGuest.locator('input[type="password"]').fill(PASSWORD);
     await pageGuest.getByRole("button", { name: "Crear cuenta" }).click();
