@@ -20,6 +20,17 @@ export default function SiteFooter() {
           Contacto
         </Link>
       </div>
+      <p className="mt-1">
+        Creado por{" "}
+        <a
+          href="https://systemasos.app"
+          target="_blank"
+          rel="noopener"
+          className="hover:text-loopy-900 transition-colors underline underline-offset-2"
+        >
+          Systemas OS®
+        </a>
+      </p>
     </footer>
   );
 }
