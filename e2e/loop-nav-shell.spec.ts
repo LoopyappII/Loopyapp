@@ -292,31 +292,38 @@ test("nav shell: create, join, tabs, map, SOS survive across tabs", async ({ bro
     await signUpAndLogin(page1, USER1.email);
     await signUpAndLogin(page2, USER2.email);
 
-    // Both users now already have their own auto-created "Mi Loopy" from
-    // signUpAndLogin. This test still wants its own named test Loopy, so
-    // navigate to /dashboard explicitly (still reachable, just not the
-    // default landing spot after signup anymore).
-    await page1.goto("/dashboard");
-
-    // Creating a Loopy now auto-navigates straight to its map
-    // (app/dashboard/page.tsx's handleCreateLoop -> /mapa, this feature's
-    // whole point) instead of staying on /dashboard.
-    const loopName = `QA Shell ${stamp}`;
-    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-    await page1.getByRole("button", { name: "Crear Loopy" }).click();
-    await page1.waitForURL(/\/loop\/[^/]+\/mapa/, { timeout: 10000 });
+    // Each account already has its own auto-created "Mi Loopy" from
+    // signUpAndLogin, and each landed directly on its own map. This test
+    // wants a specific, known name to assert on later ("QA Shell ...") —
+    // rename page1's auto-created Loopy via Ajustes instead of creating a
+    // brand-new second one: a second Loopy would need a real paid
+    // subscription (one free trial per account, already spent by
+    // signUpAndLogin's auto-create — see
+    // app/api/loops/start-trial/route.ts's per-admin eligibility check),
+    // which this environment has no Stripe credentials to exercise.
+    await expect(page1).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
     loopId = page1.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
     expect(loopId).toBeTruthy();
 
-    // app/loop/[id]/page.tsx's bare-id redirect to /mapa still exists and
-    // still deserves coverage — exercise it explicitly now that the create
-    // flow itself no longer goes through it.
+    const loopName = `QA Shell ${stamp}`;
+    await page1.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await page1.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes1] = await Promise.all([
+      page1.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      page1.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes1.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
+
+    // app/loop/[id]/page.tsx's bare-id redirect to /mapa still deserves
+    // coverage.
     await page1.goto(`/loop/${loopId}`);
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/mapa`), { timeout: 10000 });
 
     // Read the invite code from Familia (shown there for a fresh Loopy with
-    // <=1 member) instead of the old dashboard list-link text, which no
-    // longer exists on this path.
+    // <=1 member).
     await page1.getByRole("link", { name: "Familia", exact: true }).click();
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
     const codeText = await page1.getByText(/Compartí este código:/).innerText();
@@ -456,14 +463,25 @@ test("familia: admin adds pending member by phone, auto-links on matching signup
 
   try {
     await signUpAndLogin(page1, `qa.loopy1b.${stamp}@mailinator.com`);
-    await page1.goto("/dashboard");
 
-    const loopName = `QA Familia ${stamp}`;
-    await page1.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-    await page1.getByRole("button", { name: "Crear Loopy" }).click();
-    await page1.waitForURL(/\/loop\/[^/]+\/mapa/, { timeout: 10000 });
+    // Rename the auto-created default Loopy instead of creating a second
+    // one — see the "nav shell" test's comment above for the full
+    // explanation (one free trial per account, already spent).
+    await expect(page1).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
     loopId = page1.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
     expect(loopId).toBeTruthy();
+
+    const loopName = `QA Familia ${stamp}`;
+    await page1.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await page1.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes] = await Promise.all([
+      page1.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      page1.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
 
     await page1.getByRole("link", { name: "Familia", exact: true }).click();
     await expect(page1).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
@@ -617,14 +635,25 @@ test("invite: admin adds pending member, guest accepts via invite link and gets 
 
   try {
     await signUpAndLogin(pageAdmin, adminEmail);
-    await pageAdmin.goto("/dashboard");
 
-    const loopName = `QA Invite ${stamp}`;
-    await pageAdmin.getByPlaceholder(/nombre del loopy/i).fill(loopName);
-    await pageAdmin.getByRole("button", { name: "Crear Loopy" }).click();
-    await pageAdmin.waitForURL(/\/loop\/[^/]+\/mapa/, { timeout: 10000 });
+    // Rename the auto-created default Loopy instead of creating a second
+    // one — see the "nav shell" test's comment for the full explanation
+    // (one free trial per account, already spent).
+    await expect(pageAdmin).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
     loopId = pageAdmin.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
     expect(loopId).toBeTruthy();
+
+    const loopName = `QA Invite ${stamp}`;
+    await pageAdmin.getByRole("link", { name: "Ajustes del Loopy" }).click();
+    await expect(pageAdmin).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
+    await pageAdmin.getByPlaceholder("Nombre del Loopy").fill(loopName);
+    const [renameRes] = await Promise.all([
+      pageAdmin.waitForResponse(
+        (res) => res.url().includes("/rest/v1/loops") && res.request().method() === "PATCH"
+      ),
+      pageAdmin.getByRole("button", { name: "Guardar" }).click(),
+    ]);
+    expect(renameRes.ok(), "renaming the auto-created Loopy should succeed").toBeTruthy();
 
     await pageAdmin.getByRole("link", { name: "Familia", exact: true }).click();
     await expect(pageAdmin).toHaveURL(new RegExp(`/loop/${loopId}/familia$`));
