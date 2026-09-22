@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabaseClient";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { fadeInUp } from "@/lib/motion";
-import { acceptInvite } from "@/lib/loopBootstrap";
+import { acceptInvite, createDefaultLoop } from "@/lib/loopBootstrap";
 
 export default function LoginPage() {
   return (
@@ -48,6 +48,22 @@ function LoginForm() {
       if ("loopId" in accepted) {
         router.push(`/loop/${accepted.loopId}/mapa`);
         return;
+      }
+    } else if (data.session) {
+      // Sin contexto de invitación: si es la primera vez que este usuario
+      // entra (cero Loopys), le creamos el Loopy por defecto y lo mandamos
+      // directo al mapa, igual que a un registro nuevo. Un usuario que ya
+      // tiene Loopys sigue yendo a /dashboard exactamente como hoy.
+      const { data: memberships } = await supabase
+        .from("loop_members")
+        .select("loop_id")
+        .eq("user_id", data.session.user.id);
+      if ((memberships || []).length === 0) {
+        const created = await createDefaultLoop(data.session.user.id, data.session.access_token);
+        if ("loopId" in created) {
+          router.push(`/loop/${created.loopId}/mapa`);
+          return;
+        }
       }
     }
     router.push("/dashboard");

@@ -228,17 +228,23 @@ async function signUpAndLogin(page: Page, email: string, phone: string = "+34600
     // email" card instead of redirecting (data.session was null). This is
     // the ONLY branch this live Supabase project's signups ever take (its
     // "Confirm email" setting is unconditionally ON — see this file's
-    // header comment), which matters below: createDefaultLoop is only ever
-    // called from signup's resolveDestination, gated behind `data.session`
-    // being truthy right after signUp(). app/login/page.tsx's handleSubmit
-    // never calls it (verified by reading the file: a plain login with no
-    // invite/pm params falls straight through to router.push("/dashboard")
-    // unconditionally — a deliberate, reviewed choice, not an oversight;
-    // see task-4-report.md's self-review item 3). So a signup that needs
-    // confirmation lands on /dashboard after login, not on an
-    // auto-created Loopy's map — callers that need a Loopy after this
-    // helper (every caller in this file) navigate to /dashboard themselves
-    // rather than relying on this helper's landing URL.
+    // header comment). app/login/page.tsx's handleSubmit now mirrors
+    // signup's resolveDestination for exactly this case: a plain login (no
+    // invite/pm params) checks loop_members for this user and, only if it's
+    // empty, calls createDefaultLoop and lands on that Loopy's map — a
+    // returning/already-linked user is left landing on /dashboard exactly
+    // as before (deliberate, scoped fix; see app/login/page.tsx).
+    //
+    // Which of the two this lands on is data-dependent, not flaky: most
+    // callers in this file are a genuinely first-ever login (zero
+    // loop_members -> /loop/.../mapa), but the phone-auto-link sub-flow
+    // below signs a user up whose phone already matches a pending member
+    // added by another admin — Postgres links that membership at signUp()
+    // time (before this login even runs), so that user already has 1+
+    // loop_members by the time they log in and correctly stays on
+    // /dashboard, same as any returning user. Accept either here; callers
+    // that need a specific destination assert or navigate explicitly
+    // themselves right after this helper returns.
     await expect(page.getByText("¡Cuenta creada!")).toBeVisible({ timeout: 5000 });
     await confirmEmailViaMailinator(page, email);
 
@@ -246,7 +252,7 @@ async function signUpAndLogin(page: Page, email: string, phone: string = "+34600
     await page.locator('input[type="email"]').fill(email);
     await page.locator('input[type="password"]').fill(PASSWORD);
     await page.getByRole("button", { name: "Acceder" }).click();
-    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/dashboard|\/loop\/[^/]+\/mapa/, { timeout: 15000 });
   }
 }
 
@@ -551,36 +557,6 @@ test("signup: organic account auto-creates a default Loopy and lands on its map"
   let loopId: string | undefined;
 
   try {
-    // KNOWN, LIVE-VERIFIED GAP (found by this exact test): this project's
-    // Supabase "Confirm email" is unconditionally ON (see this file's
-    // header comment and confirmEmailViaMailinator's doc comment), so
-    // every organic signUp() here returns no session and signUpAndLogin
-    // falls through to its confirmation-required branch — the ONLY branch
-    // any signup in this whole suite ever takes against this live
-    // project. createDefaultLoop (lib/loopBootstrap.ts) is invoked from
-    // exactly one place in the app: app/signup/page.tsx's
-    // resolveDestination, itself only reached when `data.session` is
-    // truthy immediately after signUp() (i.e. confirmation NOT required).
-    // app/login/page.tsx's handleSubmit never calls it — a plain login
-    // with no invite/pm params falls straight through to
-    // router.push("/dashboard") unconditionally, confirmed to be a
-    // deliberate, already-reviewed choice (task-4-report.md's self-review:
-    // "Plain login -> /dashboard unconditionally ... preserving the
-    // existing deliberate behavior"), not a bug in this test. Net effect:
-    // on this live project, an organic signup that needs email
-    // confirmation — which is every organic signup here — never gets a
-    // default Loopy and lands on /dashboard with zero Loopys instead.
-    // Fixing this needs app/login/page.tsx to also call createDefaultLoop
-    // when !hasInvite and the user has no Loopys yet, which is out of
-    // scope for an e2e-spec-only task. test.fail() keeps this a tracked,
-    // documented red instead of a silently weakened assertion or a test
-    // quietly dropped from the suite — remove it once app/login/page.tsx
-    // is fixed and this genuinely starts passing.
-    test.fail(
-      true,
-      "app/login/page.tsx never calls createDefaultLoop after a confirmation-required organic signup — see comment above"
-    );
-
     await signUpAndLogin(page, email);
     await expect(page).toHaveURL(/\/loop\/[^/]+\/mapa/, { timeout: 15000 });
     loopId = page.url().match(/\/loop\/([^/]+)\/mapa/)?.[1];
@@ -591,7 +567,11 @@ test("signup: organic account auto-creates a default Loopy and lands on its map"
     await page.getByRole("link", { name: "Ajustes del Loopy" }).click();
     await expect(page).toHaveURL(new RegExp(`/loop/${loopId}/ajustes$`));
     await expect(page.getByPlaceholder("Nombre del Loopy")).toHaveValue("Mi Loopy");
-    await expect(page.locator("text=Modo Espejo")).toBeVisible();
+    // "Modo Espejo" also appears verbatim inside the mode <select>'s own
+    // <option> (app/loop/[id]/ajustes/page.tsx) — a plain text locator
+    // matches both and trips Playwright's strict mode. Match the summary
+    // <p> ("Modo Espejo · Código: ...") specifically instead.
+    await expect(page.locator("p", { hasText: "Modo Espejo · Código:" })).toBeVisible();
   } finally {
     if (loopId) {
       await cleanupTestData(page, page, loopId).catch((err) => {
