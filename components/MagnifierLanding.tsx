@@ -81,7 +81,7 @@ function LandingContent() {
               </span>
               <span className="text-loopy-700 text-sm">el primer día</span>
               <span className="text-loopy-700/40">·</span>
-              <span className="text-loopy-900 font-extrabold text-2xl">14,99€</span>
+              <span className="text-loopy-900 font-extrabold text-2xl">18,99€</span>
               <span className="text-loopy-700 text-sm">/ mes después</span>
             </motion.div>
           </div>

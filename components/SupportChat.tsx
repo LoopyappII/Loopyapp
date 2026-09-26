@@ -41,7 +41,7 @@ const FAQS: FaqItem[] = [
   },
   {
     q: "¿Cuánto cuesta Loopy?",
-    a: "Los primeros 2 días son gratis, sin tarjeta. Después la suscripción es de 14€ por mes y puedes cancelarla cuando quieras.",
+    a: "El primer día es gratis, sin tarjeta. Después la suscripción es de 18,99€ por mes y puedes cancelarla cuando quieras.",
     keywords: ["precio", "cuesta", "costo", "suscripcion", "pago", "plan", "gratis"],
   },
   {
