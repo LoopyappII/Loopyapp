@@ -148,7 +148,7 @@ function SignupForm() {
               <p className="text-sm text-loopy-700 text-center mt-1">
                 {hasInvite
                   ? "Crea tu cuenta para aceptar la invitación y compartir ubicación."
-                  : "Gratis el primer día, 18,99€/mes después."}
+                  : "Gratis el primer día, 19,99€/mes después (hasta 4 miembros)."}
               </p>
             </div>
 
