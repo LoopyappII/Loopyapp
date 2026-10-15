@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { LogOut, Plus, KeyRound } from "lucide-react";
+import { LogOut, Plus, KeyRound, ShieldCheck } from "lucide-react";
 import { NavbarLogo } from "@/components/LoopyLogo";
 import { SkeletonCard } from "@/components/Skeleton";
 import { supabase } from "@/lib/supabaseClient";
@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loops, setLoops] = useState<Loop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isStaff, setIsStaff] = useState(false);
 
   const [newLoopName, setNewLoopName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -34,6 +35,14 @@ export default function DashboardPage() {
       }
       setUserId(userData.user.id);
       await loadLoops(userData.user.id);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (accessToken) {
+        fetch("/api/admin/is-staff", { headers: { Authorization: `Bearer ${accessToken}` } })
+          .then((res) => res.json())
+          .then((json) => setIsStaff(!!json.isStaff))
+          .catch(() => setIsStaff(false));
+      }
       setLoading(false);
     })();
   }, [router]);
@@ -172,13 +181,24 @@ export default function DashboardPage() {
       <div className="relative z-10 px-6 py-8 max-w-md mx-auto md:max-w-2xl lg:max-w-3xl">
         <div className="flex items-center justify-between mb-8">
           <NavbarLogo size={32} dark />
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm text-loopy-700 border border-loopy-100 hover:border-bridge/50 hover:text-loopy-900 transition-colors"
-          >
-            <LogOut size={15} />
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-2">
+            {isStaff && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm text-bridge border border-bridge/30 hover:bg-bridge/5 transition-colors"
+              >
+                <ShieldCheck size={15} />
+                Panel de administración
+              </Link>
+            )}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm text-loopy-700 border border-loopy-100 hover:border-bridge/50 hover:text-loopy-900 transition-colors"
+            >
+              <LogOut size={15} />
+              Cerrar sesión
+            </button>
+          </div>
         </div>
 
         <h1 className="text-2xl font-bold text-loopy-900 mb-4">Tus Loopys</h1>
