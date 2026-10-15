@@ -70,10 +70,13 @@ export async function GET(req: NextRequest) {
   // supabaseAdmin.auth.admin.listUsers() paginado + un Map en memoria —
   // deliberadamente fuera de alcance en este plan.
   const distinctAdminIds = Array.from(new Set(loopRows.map((l) => l.admin_id as string)));
-  const { data: profiles } = await supabaseAdmin
+  const { data: profiles, error: profilesError } = await supabaseAdmin
     .from("profiles")
     .select("id, name")
     .in("id", distinctAdminIds);
+  if (profilesError) {
+    return NextResponse.json({ error: profilesError.message }, { status: 500 });
+  }
   const profileById = new Map((profiles || []).map((p) => [p.id as string, p]));
 
   const emailByAdminId = new Map<string, string | null>();
