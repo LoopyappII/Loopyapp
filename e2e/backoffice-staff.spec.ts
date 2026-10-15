@@ -21,7 +21,11 @@ test.describe("isBackofficeStaffEmail", () => {
   const ORIGINAL_ENV = process.env.BACKOFFICE_STAFF_EMAILS;
 
   test.afterEach(() => {
-    process.env.BACKOFFICE_STAFF_EMAILS = ORIGINAL_ENV;
+    if (ORIGINAL_ENV === undefined) {
+      delete process.env.BACKOFFICE_STAFF_EMAILS;
+    } else {
+      process.env.BACKOFFICE_STAFF_EMAILS = ORIGINAL_ENV;
+    }
   });
 
   test("sin variable de entorno configurada: nadie es staff", () => {
