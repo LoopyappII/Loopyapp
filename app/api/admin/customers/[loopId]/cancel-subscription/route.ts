@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireStaff } from "@/lib/backofficeAuth";
-import { stripe } from "@/lib/stripeClient";
+import { cancelStripeSubscriptionIdempotent } from "@/lib/stripeCancel";
 import { resolveStripeCustomerId } from "@/lib/stripeCustomerId";
 
 export async function POST(req: NextRequest, { params }: { params: { loopId: string } }) {
@@ -28,11 +28,10 @@ export async function POST(req: NextRequest, { params }: { params: { loopId: str
 
   const isRealStripeSubscription = !!resolveStripeCustomerId(sub.stripe_customer_id);
   if (isRealStripeSubscription) {
-    try {
-      await stripe.subscriptions.cancel(sub.stripe_subscription_id);
-    } catch (err) {
+    const cancelResult = await cancelStripeSubscriptionIdempotent(sub.stripe_subscription_id);
+    if (!cancelResult.ok) {
       return NextResponse.json(
-        { error: `No se pudo cancelar en Stripe: ${(err as Error).message}` },
+        { error: `No se pudo cancelar en Stripe: ${cancelResult.error}` },
         { status: 500 }
       );
     }

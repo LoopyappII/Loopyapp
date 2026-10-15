@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { requireStaff } from "@/lib/backofficeAuth";
-import { stripe } from "@/lib/stripeClient";
+import { cancelStripeSubscriptionIdempotent } from "@/lib/stripeCancel";
 import { resolveStripeCustomerId } from "@/lib/stripeCustomerId";
 import type { Loop, MemberRole, SubscriptionStatus } from "@/lib/types";
 
@@ -37,22 +37,28 @@ async function loadDetail(loopId: string): Promise<BackofficeCustomerDetail | nu
     .single();
   if (loopError || !loop) return null;
 
-  const { data: adminProfile } = await supabaseAdmin
+  const { data: adminProfile, error: adminProfileError } = await supabaseAdmin
     .from("profiles")
     .select("id, name, phone")
     .eq("id", loop.admin_id)
     .maybeSingle();
+  if (adminProfileError) {
+    throw new Error(adminProfileError.message);
+  }
   const { data: adminAuth } = await supabaseAdmin.auth.admin.getUserById(loop.admin_id);
 
   // Mismo hint de FK que app/loop/[id]/layout.tsx usa para este mismo join
   // (loop_members -> profiles vía user_id) — evita un error de relación
   // ambigua en PostgREST.
-  const { data: memberRows } = await supabaseAdmin
+  const { data: memberRows, error: memberRowsError } = await supabaseAdmin
     .from("loop_members")
     .select(
       "id, role, user_id, pending_name, pending_phone, member_color, profiles!loop_members_user_id_fkey(name, phone)"
     )
     .eq("loop_id", loopId);
+  if (memberRowsError) {
+    throw new Error(memberRowsError.message);
+  }
 
   const members: BackofficeMemberRow[] = (memberRows || []).map((m: any) => ({
     id: m.id,
@@ -64,11 +70,14 @@ async function loadDetail(loopId: string): Promise<BackofficeCustomerDetail | nu
     isPending: !m.user_id,
   }));
 
-  const { data: sub } = await supabaseAdmin
+  const { data: sub, error: subError } = await supabaseAdmin
     .from("loop_subscriptions")
     .select("status, trial_end, current_period_end, stripe_customer_id, stripe_subscription_id")
     .eq("loop_id", loopId)
     .maybeSingle();
+  if (subError) {
+    throw new Error(subError.message);
+  }
 
   return {
     loop: loop as Loop,
@@ -95,7 +104,12 @@ export async function GET(req: NextRequest, { params }: { params: { loopId: stri
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
-  const detail = await loadDetail(params.loopId);
+  let detail: BackofficeCustomerDetail | null;
+  try {
+    detail = await loadDetail(params.loopId);
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
   if (!detail) {
     return NextResponse.json({ error: "Loopy no encontrado" }, { status: 404 });
   }
@@ -124,13 +138,20 @@ export async function GET(req: NextRequest, { params }: { params: { loopId: stri
 // ".eq('loop_id', loopId)" directo contra zone_events fallaría con
 // "column does not exist" en cada intento — se maneja aparte, resolviendo
 // primero los ids de safe_zones del Loopy.
+//
+// loop_subscriptions TAMPOCO está en esta lista, pero por una razón
+// distinta: sí tiene loop_id propio, pero su borrado se maneja aparte,
+// DESPUÉS de intentar cancelar la suscripción en Stripe (ver DELETE más
+// abajo). Si loop_subscriptions se borrara acá, en este loop, se perdería
+// para siempre el stripe_subscription_id necesario para cancelar
+// manualmente en el Dashboard de Stripe en caso de que el cancel
+// automático falle — exactamente el escenario que este orden evita.
 const CHILD_TABLES_BY_LOOP_ID = [
   "sos_alerts",
   "speed_alerts",
   "locations",
   "safe_zones",
   "loop_members",
-  "loop_subscriptions",
 ] as const;
 
 export async function DELETE(req: NextRequest, { params }: { params: { loopId: string } }) {
@@ -146,11 +167,20 @@ export async function DELETE(req: NextRequest, { params }: { params: { loopId: s
   // funcionado: así, si cualquier paso de abajo falla, no cancelamos una
   // suscripción real de un cliente por un Loopy que en los hechos no se
   // terminó de borrar.
-  const { data: sub } = await supabaseAdmin
+  //
+  // Si esta query falla (error real, no "no rows"), NO seguimos: un `sub`
+  // undefined por un error transitorio haría que `resolveStripeCustomerId`
+  // dé falsy y el cancel de Stripe se salte por completo, procediendo a
+  // borrar todo (incluido el Loopy) sin haber intentado cancelar una
+  // suscripción real.
+  const { data: sub, error: subError } = await supabaseAdmin
     .from("loop_subscriptions")
     .select("stripe_customer_id, stripe_subscription_id")
     .eq("loop_id", loopId)
     .maybeSingle();
+  if (subError) {
+    return NextResponse.json({ error: subError.message }, { status: 500 });
+  }
 
   // zone_events se relaciona con el Loopy solo vía zone_id ->
   // safe_zones.loop_id (ver comentario de CHILD_TABLES_BY_LOOP_ID) — hay
@@ -185,7 +215,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { loopId: s
   }
 
   // Recién acá, con TODA la limpieza de arriba ya confirmada, tocamos
-  // Stripe y borramos la fila de loops.
+  // Stripe. loop_subscriptions TODAVÍA no se borró (ver comentario de
+  // CHILD_TABLES_BY_LOOP_ID) — si el cancel falla de verdad (no
+  // "resource_missing"), abortamos ACÁ, antes de borrar loop_subscriptions
+  // o loops, para no perder el stripe_subscription_id que hace falta para
+  // cancelar manualmente.
   //
   // Mismo filtro de "¿es un id real de Stripe?" que
   // app/api/stripe/checkout/route.ts ya usa — si es sintético
@@ -193,16 +227,28 @@ export async function DELETE(req: NextRequest, { params }: { params: { loopId: s
   // Stripe.
   const isRealStripeSubscription = !!resolveStripeCustomerId(sub?.stripe_customer_id);
   if (isRealStripeSubscription && sub?.stripe_subscription_id) {
-    try {
-      await stripe.subscriptions.cancel(sub.stripe_subscription_id);
-    } catch (err) {
-      // Si Stripe ya no la tiene (p.ej. se canceló por otra vía antes), no
-      // bloqueamos el borrado del Loopy por eso — solo lo logueamos.
-      console.warn(
-        `No se pudo cancelar ${sub.stripe_subscription_id} en Stripe antes de borrar el Loopy ${loopId}:`,
-        err
+    const cancelResult = await cancelStripeSubscriptionIdempotent(sub.stripe_subscription_id);
+    if (!cancelResult.ok) {
+      return NextResponse.json(
+        {
+          error: `No se pudo cancelar ${sub.stripe_subscription_id} en Stripe, se abortó el borrado del Loopy: ${cancelResult.error}`,
+        },
+        { status: 500 }
       );
     }
+  }
+
+  // Solo acá, con el cancel de Stripe exitoso (o nada real que cancelar),
+  // borramos loop_subscriptions y recién después la fila de loops.
+  const { error: subDeleteError } = await supabaseAdmin
+    .from("loop_subscriptions")
+    .delete()
+    .eq("loop_id", loopId);
+  if (subDeleteError) {
+    return NextResponse.json(
+      { error: `No se pudo limpiar loop_subscriptions antes de borrar el Loopy: ${subDeleteError.message}` },
+      { status: 500 }
+    );
   }
 
   const { error: deleteError } = await supabaseAdmin.from("loops").delete().eq("id", loopId);
