@@ -54,8 +54,8 @@ function LandingContent() {
               , a tu manera
             </motion.h1>
             <motion.p variants={fadeInUp} className="mt-5 text-lg text-white/80 max-w-md">
-              Crea un Loopy y comparte ubicación entre pares, o supervisa a
-              quien más te importa. Tú eliges el modo.
+              Crea un Loopy y comparte ubicación entre vosotros, o supervisa
+              a quien más te importa. Tú eliges el modo.
             </motion.p>
             <motion.p variants={fadeInUp} className="mt-2 text-sm text-white/60 max-w-md">
               El admin siempre tiene el control: decide el modo, quién forma
