@@ -73,15 +73,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <main className="min-h-screen bg-loopy-50/40">
-      <header className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 border-b border-loopy-100 bg-white/80 backdrop-blur-md">
-        <Link href="/admin" aria-label="Panel de administración">
-          <NavbarLogo size={26} />
-        </Link>
-        <Link href="/dashboard" className="text-sm text-loopy-700 hover:text-loopy-900">
-          Salir del panel
-        </Link>
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-loopy-100">
+          <Link href="/admin" aria-label="Panel de administración" className="flex items-center gap-2.5">
+            <NavbarLogo size={26} />
+            <span className="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wide text-bridge bg-bridge/10 rounded-full px-2 py-0.5">
+              Staff · Looper Cashline
+            </span>
+          </Link>
+          <Link href="/dashboard" className="text-sm text-loopy-700 hover:text-loopy-900">
+            Salir del panel
+          </Link>
+        </div>
+        <div className="h-[3px] bg-gradient-to-r from-loopy-700 via-bridge to-glow-500" />
       </header>
-      <div className="max-w-5xl mx-auto px-4 md:px-8 py-6">{children}</div>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6">{children}</div>
     </main>
   );
 }
